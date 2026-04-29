@@ -78,7 +78,9 @@
                     <execution>
                         <id>unpack-intellij</id>
                         <phase>generate-resources</phase>
-                        <goals><goal>unpack</goal></goals>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
                         <configuration>
                             <artifactItems>
                                 <artifactItem>
@@ -115,7 +117,9 @@
                     <execution>
                         <id>compile-and-stage-plugin</id>
                         <phase>process-classes</phase>
-                        <goals><goal>run</goal></goals>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
                         <configuration>
                             <target>
                                 <!-- Compile IdeaFormatterStarter against IC JARs -->
@@ -166,7 +170,9 @@
                     <execution>
                         <id>build-engine-zip</id>
                         <phase>package</phase>
-                        <goals><goal>run</goal></goals>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
                         <configuration>
                             <target>
                                 <zip destfile="${project.build.directory}/formatter-engine.zip">
@@ -198,7 +204,9 @@
                     <execution>
                         <id>attach-engine-zip</id>
                         <phase>package</phase>
-                        <goals><goal>attach-artifact</goal></goals>
+                        <goals>
+                            <goal>attach-artifact</goal>
+                        </goals>
                         <configuration>
                             <artifacts>
                                 <artifact>

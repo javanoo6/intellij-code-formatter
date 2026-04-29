@@ -16,7 +16,6 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -24,43 +23,48 @@ import java.util.List;
 
 /**
  * Custom IntelliJ ApplicationStarter registered under id="ideaformatter" in plugin.xml.
- *
+ * <p>
  * Invoked by IntelliJ's application startup when the command-line contains:
- *   com.intellij.idea.Main ideaformatter [flags] file1 file2 ...
- *
+ * com.intellij.idea.Main ideaformatter [flags] file1 file2 ...
+ * <p>
  * Supported flags:
- *   --format            reformat code via CodeStyleManager
- *   --optimize-imports  remove unused / sort imports via OptimizeImportsProcessor
- *   --rearrange         rearrange class members via RearrangeCodeProcessor
- *   --editorconfig <p>  path to .editorconfig; its parent dir is used as the project root
- *                       so IntelliJ's EditorConfig plugin picks up the file automatically
- *
+ * --format            reformat code via CodeStyleManager
+ * --optimize-imports  remove unused / sort imports via OptimizeImportsProcessor
+ * --rearrange         rearrange class members via RearrangeCodeProcessor
+ * --editorconfig <p>  path to .editorconfig; its parent dir is used as the project root
+ * so IntelliJ's EditorConfig plugin picks up the file automatically
+ * <p>
  * This class runs INSIDE the spawned IntelliJ subprocess (not in the thin CLI process).
  * IntelliJ Platform JARs are on the classpath of that subprocess; the caller (FormatterLauncher)
  * never loads IntelliJ classes directly.
  */
 public class IdeaFormatterStarter implements ApplicationStarter {
 
+    private static void die(String msg) {
+        System.err.println("[formatter] ERROR: " + msg);
+        System.exit(1);
+    }
+
     @Override
     public void main(@NotNull List<String> args) {
-        boolean doFormat          = false;
+        boolean doFormat = false;
         boolean doOptimizeImports = false;
-        boolean doRearrange       = false;
-        Path editorConfigDir      = null;
-        List<Path> files          = new ArrayList<>();
+        boolean doRearrange = false;
+        Path editorConfigDir = null;
+        List<Path> files = new ArrayList<>();
 
         // args[0] is "ideaformatter" (the routing key) — skip it
         Iterator<String> it = args.listIterator(1);
         while (it.hasNext()) {
             String arg = it.next();
             switch (arg) {
-                case "--format"           -> doFormat          = true;
+                case "--format" -> doFormat = true;
                 case "--optimize-imports" -> doOptimizeImports = true;
-                case "--rearrange"        -> doRearrange       = true;
-                case "--editorconfig"     -> {
+                case "--rearrange" -> doRearrange = true;
+                case "--editorconfig" -> {
                     if (!it.hasNext()) die("--editorconfig requires a path argument");
                     Path ec = Path.of(it.next()).toAbsolutePath();
-                    editorConfigDir = ec.getParent() != null ? ec.getParent() : Path.of(".");
+                    editorConfigDir = ec.getParent()!=null ? ec.getParent():Path.of(".");
                 }
                 default -> {
                     if (arg.startsWith("-")) die("Unknown option: " + arg);
@@ -73,12 +77,12 @@ public class IdeaFormatterStarter implements ApplicationStarter {
 
         // Set project base so IntelliJ's EditorConfig plugin finds the .editorconfig
         // by walking up from that directory (standard EditorConfig discovery behaviour).
-        Path projectBase = editorConfigDir != null
+        Path projectBase = editorConfigDir!=null
                 ? editorConfigDir
-                : files.get(0).getParent();
+                :files.get(0).getParent();
 
         Project project = openProject(projectBase);
-        if (project == null) die("Failed to open a temporary project at " + projectBase);
+        if (project==null) die("Failed to open a temporary project at " + projectBase);
 
         try {
             final boolean fmt = doFormat;
@@ -102,22 +106,22 @@ public class IdeaFormatterStarter implements ApplicationStarter {
     private void processFile(Project project, Path filePath,
                              boolean format, boolean optimizeImports, boolean rearrange) {
         VirtualFile vf = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(filePath);
-        if (vf == null) {
+        if (vf==null) {
             System.err.println("[formatter] SKIP (VirtualFile not found): " + filePath);
             return;
         }
 
         PsiFile psiFile = PsiManager.getInstance(project).findFile(vf);
-        if (psiFile == null) {
+        if (psiFile==null) {
             System.err.println("[formatter] SKIP (no PSI for file): " + filePath);
             return;
         }
 
         System.out.println("[formatter] Processing: " + filePath.getFileName());
         NonProjectFileWritingAccessProvider.allowWriting(List.of(vf));
-        if (format)          new ReformatCodeProcessor(project, psiFile, null, false).run();
+        if (format) new ReformatCodeProcessor(project, psiFile, null, false).run();
         if (optimizeImports) new OptimizeImportsProcessor(project, psiFile).run();
-        if (rearrange)       new RearrangeCodeProcessor(psiFile).run();
+        if (rearrange) new RearrangeCodeProcessor(psiFile).run();
     }
 
     /**
@@ -133,10 +137,5 @@ public class IdeaFormatterStarter implements ApplicationStarter {
             System.err.println("[formatter] Error opening project: " + e.getMessage());
             return null;
         }
-    }
-
-    private static void die(String msg) {
-        System.err.println("[formatter] ERROR: " + msg);
-        System.exit(1);
     }
 }

@@ -53,7 +53,9 @@
                     <execution>
                         <id>copy-engine-zip-to-resources</id>
                         <phase>generate-resources</phase>
-                        <goals><goal>run</goal></goals>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
                         <configuration>
                             <target>
                                 <mkdir dir="${project.build.outputDirectory}/engine"/>
@@ -87,7 +89,9 @@
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals><goal>shade</goal></goals>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
                         <configuration>
                             <outputFile>${project.build.directory}/formatter-cli-full.jar</outputFile>
                             <createDependencyReducedPom>false</createDependencyReducedPom>

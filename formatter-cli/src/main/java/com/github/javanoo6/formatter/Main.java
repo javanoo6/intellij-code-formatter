@@ -50,7 +50,7 @@ public class Main implements Callable<Integer> {
             System.err.println("Error: specify at least one of --format, --optimize-imports, --rearrange");
             return 1;
         }
-        if (files == null || files.isEmpty()) {
+        if (files==null || files.isEmpty()) {
             System.err.println("Error: at least one file path is required.");
             return 1;
         }

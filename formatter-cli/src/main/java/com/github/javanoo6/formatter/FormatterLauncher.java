@@ -1,7 +1,6 @@
 package com.github.javanoo6.formatter;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -10,7 +9,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -18,16 +16,16 @@ import java.util.zip.ZipInputStream;
 /**
  * Locates (or extracts) the IntelliJ engine, then spawns a subprocess that runs
  * IdeaFormatterStarter via IntelliJ's application startup machinery.
- *
+ * <p>
  * The engine ZIP (produced by minimal-jar-builder) already contains the plugin at:
- *   custom-plugins/ideaformatter/lib/formatter-plugin.jar
- *   custom-plugins/ideaformatter/META-INF/plugin.xml
+ * custom-plugins/ideaformatter/lib/formatter-plugin.jar
+ * custom-plugins/ideaformatter/META-INF/plugin.xml
  * No runtime plugin setup is needed — just point idea.plugins.path at custom-plugins/.
- *
+ * <p>
  * Engine resolution order:
- *   1. --engine-dir flag
- *   2. ./engine/ directory next to the running JAR
- *   3. Bundled engine/formatter-engine.zip extracted to $TMPDIR/intellij-formatter-engine/
+ * 1. --engine-dir flag
+ * 2. ./engine/ directory next to the running JAR
+ * 3. Bundled engine/formatter-engine.zip extracted to $TMPDIR/intellij-formatter-engine/
  */
 public class FormatterLauncher {
 
@@ -43,10 +41,35 @@ public class FormatterLauncher {
     public FormatterLauncher(Path engineDirOverride, Path editorConfigPath,
                              boolean format, boolean optimizeImports, boolean rearrange) {
         this.engineDirOverride = engineDirOverride;
-        this.editorConfigPath  = editorConfigPath;
-        this.format            = format;
-        this.optimizeImports   = optimizeImports;
-        this.rearrange         = rearrange;
+        this.editorConfigPath = editorConfigPath;
+        this.format = format;
+        this.optimizeImports = optimizeImports;
+        this.rearrange = rearrange;
+    }
+
+    private static void collectJars(Path dir, List<String> target) throws Exception {
+        if (!Files.isDirectory(dir)) return;
+        try (var stream = Files.walk(dir)) {
+            stream.filter(p -> p.toString().endsWith(".jar"))
+                    .map(p -> p.toAbsolutePath().toString())
+                    .forEach(target::add);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Engine resolution
+    // -------------------------------------------------------------------------
+
+    private static void deleteQuietly(Path path) {
+        try {
+            if (!Files.exists(path)) return;
+            try (var stream = Files.walk(path)) {
+                stream.sorted(java.util.Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     public int launch(List<Path> files) throws Exception {
@@ -61,11 +84,11 @@ public class FormatterLauncher {
     }
 
     // -------------------------------------------------------------------------
-    // Engine resolution
+    // Subprocess command construction
     // -------------------------------------------------------------------------
 
     private Path resolveEngine() throws Exception {
-        if (engineDirOverride != null && Files.isDirectory(engineDirOverride)) {
+        if (engineDirOverride!=null && Files.isDirectory(engineDirOverride)) {
             return engineDirOverride.toAbsolutePath();
         }
 
@@ -77,7 +100,8 @@ public class FormatterLauncher {
             if (Files.isDirectory(sibling)) {
                 return sibling.toAbsolutePath();
             }
-        } catch (URISyntaxException ignored) {}
+        } catch (URISyntaxException ignored) {
+        }
 
         return extractBundledEngine();
     }
@@ -98,7 +122,7 @@ public class FormatterLauncher {
                     + ". Run `mvn package -pl minimal-jar-builder` first.");
             try (ZipInputStream zis = new ZipInputStream(raw)) {
                 ZipEntry entry;
-                while ((entry = zis.getNextEntry()) != null) {
+                while ((entry = zis.getNextEntry())!=null) {
                     Path dest = cacheDir.resolve(entry.getName()).normalize();
                     if (!dest.startsWith(cacheDir)) {
                         throw new SecurityException("Zip-slip detected in: " + entry.getName());
@@ -119,16 +143,12 @@ public class FormatterLauncher {
         return cacheDir;
     }
 
-    // -------------------------------------------------------------------------
-    // Subprocess command construction
-    // -------------------------------------------------------------------------
-
     private List<String> buildCommand(Path engine, Path pluginsRoot, List<Path> files) throws Exception {
-        // Collect engine classpath: lib/** + plugins/java/lib/** + plugins/editorconfig/lib/**
+        // Collect only the platform classpath from lib/**.
+        // Bundled plugins under plugins/** should be loaded by IntelliJ's plugin manager,
+        // not preloaded onto the application classpath.
         List<String> cp = new ArrayList<>();
         collectJars(engine.resolve("lib"), cp);
-        collectJars(engine.resolve("plugins/java/lib"), cp);
-        collectJars(engine.resolve("plugins/editorconfig/lib"), cp);
 
         // Temp directories for IntelliJ config and system state (isolated per run)
         Path configDir = Files.createTempDirectory("idea-config-");
@@ -222,10 +242,10 @@ public class FormatterLauncher {
         cmd.add("ideaformatter");
 
         // Our custom flags
-        if (format)          cmd.add("--format");
+        if (format) cmd.add("--format");
         if (optimizeImports) cmd.add("--optimize-imports");
-        if (rearrange)       cmd.add("--rearrange");
-        if (editorConfigPath != null) {
+        if (rearrange) cmd.add("--rearrange");
+        if (editorConfigPath!=null) {
             cmd.add("--editorconfig");
             cmd.add(editorConfigPath.toAbsolutePath().toString());
         }
@@ -238,26 +258,6 @@ public class FormatterLauncher {
         return cmd;
     }
 
-    private static void collectJars(Path dir, List<String> target) throws Exception {
-        if (!Files.isDirectory(dir)) return;
-        try (var stream = Files.walk(dir)) {
-            stream.filter(p -> p.toString().endsWith(".jar"))
-                  .map(p -> p.toAbsolutePath().toString())
-                  .forEach(target::add);
-        }
-    }
-
-    private static void deleteQuietly(Path path) {
-        try {
-            if (!Files.exists(path)) return;
-            try (var stream = Files.walk(path)) {
-                stream.sorted(java.util.Comparator.reverseOrder())
-                      .map(Path::toFile)
-                      .forEach(File::delete);
-            }
-        } catch (Exception ignored) {}
-    }
-
     private String cacheKey() {
         try {
             Path jarPath = Path.of(FormatterLauncher.class.getProtectionDomain()
@@ -266,7 +266,8 @@ public class FormatterLauncher {
                 long stamp = Files.getLastModifiedTime(jarPath).toMillis();
                 return CACHED_ENGINE_DIR_PREFIX + stamp;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return CACHED_ENGINE_DIR_PREFIX + "dev";
     }
 }
