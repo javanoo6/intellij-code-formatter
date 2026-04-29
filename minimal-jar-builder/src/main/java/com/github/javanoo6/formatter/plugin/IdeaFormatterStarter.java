@@ -7,6 +7,7 @@ import com.intellij.ide.impl.OpenProjectTask;
 import com.intellij.openapi.application.ApplicationStarter;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ex.ProjectManagerEx;
 import com.intellij.openapi.vfs.LocalFileSystem;
@@ -113,6 +114,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         }
 
         System.out.println("[formatter] Processing: " + filePath.getFileName());
+        NonProjectFileWritingAccessProvider.allowWriting(List.of(vf));
         if (format)          new ReformatCodeProcessor(project, psiFile, null, false).run();
         if (optimizeImports) new OptimizeImportsProcessor(project, psiFile).run();
         if (rearrange)       new RearrangeCodeProcessor(psiFile).run();
@@ -125,11 +127,8 @@ public class IdeaFormatterStarter implements ApplicationStarter {
      */
     private Project openProject(Path basePath) {
         try {
-            Path ideaDir = Files.createTempDirectory("ideaformatter-project-");
-            Files.createDirectories(ideaDir.resolve(".idea"));
-
             return ProjectManagerEx.getInstanceEx()
-                    .openProject(ideaDir, OpenProjectTask.build().withProjectName("formatter-project"));
+                    .openProject(basePath.toAbsolutePath(), OpenProjectTask.build().withProjectName("formatter-project"));
         } catch (Exception e) {
             System.err.println("[formatter] Error opening project: " + e.getMessage());
             return null;

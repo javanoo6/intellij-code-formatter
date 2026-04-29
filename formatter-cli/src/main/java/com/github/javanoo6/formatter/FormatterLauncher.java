@@ -1,6 +1,7 @@
 package com.github.javanoo6.formatter;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -9,6 +10,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -30,7 +32,7 @@ import java.util.zip.ZipInputStream;
 public class FormatterLauncher {
 
     private static final String ENGINE_RESOURCE = "/engine/formatter-engine.zip";
-    private static final String CACHED_ENGINE_DIR = "intellij-formatter-engine";
+    private static final String CACHED_ENGINE_DIR_PREFIX = "intellij-formatter-engine-";
 
     private final Path engineDirOverride;
     private final Path editorConfigPath;
@@ -81,7 +83,7 @@ public class FormatterLauncher {
     }
 
     private Path extractBundledEngine() throws Exception {
-        Path cacheDir = Path.of(System.getProperty("java.io.tmpdir"), CACHED_ENGINE_DIR);
+        Path cacheDir = Path.of(System.getProperty("java.io.tmpdir"), cacheKey());
 
         // Sentinel file signals a complete prior extraction
         if (Files.isDirectory(cacheDir) && Files.exists(cacheDir.resolve(".extracted"))) {
@@ -144,14 +146,55 @@ public class FormatterLauncher {
         cmd.add(ProcessHandle.current().info().command().orElse("java"));
 
         // Required --add-opens for IntelliJ on JDK 17+
-        cmd.add("--add-opens=java.base/java.lang=ALL-UNNAMED");
-        cmd.add("--add-opens=java.base/java.util=ALL-UNNAMED");
         cmd.add("--add-opens=java.base/java.io=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.lang=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.lang.ref=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.lang.reflect=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.net=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.nio=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.nio.charset=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.text=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.time=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.util=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.util.concurrent=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/sun.net.dns=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/sun.nio.ch=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/sun.nio.fs=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/sun.security.ssl=ALL-UNNAMED");
+        cmd.add("--add-opens=java.base/sun.security.util=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/com.sun.java.swing=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/com.sun.java.swing.plaf.gtk=ALL-UNNAMED");
         cmd.add("--add-opens=java.desktop/java.awt=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/java.awt.dnd.peer=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/java.awt.event=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/java.awt.font=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/java.awt.image=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/java.awt.peer=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/javax.swing=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/javax.swing.text=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/javax.swing.text.html=ALL-UNNAMED");
         cmd.add("--add-opens=java.desktop/sun.awt=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/sun.awt.datatransfer=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/sun.awt.image=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/sun.font=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/sun.java2d=ALL-UNNAMED");
+        cmd.add("--add-opens=java.desktop/sun.swing=ALL-UNNAMED");
+        cmd.add("--add-opens=java.management/sun.management=ALL-UNNAMED");
+        cmd.add("--add-opens=jdk.attach/sun.tools.attach=ALL-UNNAMED");
+        cmd.add("--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED");
+        cmd.add("--add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED");
+        cmd.add("--add-opens=jdk.jdi/com.sun.tools.jdi=ALL-UNNAMED");
 
         // IntelliJ system properties
+        cmd.add("-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader");
         cmd.add("-Djava.awt.headless=true");
+        cmd.add("-Didea.vendor.name=JetBrains");
+        cmd.add("-Didea.platform.prefix=Idea");
         cmd.add("-Didea.headless.enable.statistics=false");
         cmd.add("-Didea.suppress.statistics.report=true");
         cmd.add("-Didea.fatal.error.notification=disabled");
@@ -160,6 +203,14 @@ public class FormatterLauncher {
         cmd.add("-Didea.system.path=" + systemDir.toAbsolutePath());
         cmd.add("-Didea.plugins.path=" + pluginsRoot.toAbsolutePath());
         cmd.add("-Didea.log.path=" + systemDir.resolve("log").toAbsolutePath());
+        cmd.add("-Djna.boot.library.path=" + engine.resolve("lib/jna/amd64").toAbsolutePath());
+        cmd.add("-Dpty4j.preferred.native.folder=" + engine.resolve("lib/pty4j").toAbsolutePath());
+        cmd.add("-Djna.nosys=true");
+        cmd.add("-Djna.noclasspath=true");
+        cmd.add("-Dintellij.platform.runtime.repository.path=" + engine.resolve("modules/module-descriptors.jar").toAbsolutePath());
+        cmd.add("-Dsplash=false");
+        cmd.add("-Daether.connector.resumeDownloads=false");
+        cmd.add("-Dcompose.swing.render.on.graphics=true");
         cmd.add("-Xmx512m");
 
         // Classpath
@@ -205,5 +256,17 @@ public class FormatterLauncher {
                       .forEach(File::delete);
             }
         } catch (Exception ignored) {}
+    }
+
+    private String cacheKey() {
+        try {
+            Path jarPath = Path.of(FormatterLauncher.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            if (Files.isRegularFile(jarPath)) {
+                long stamp = Files.getLastModifiedTime(jarPath).toMillis();
+                return CACHED_ENGINE_DIR_PREFIX + stamp;
+            }
+        } catch (Exception ignored) {}
+        return CACHED_ENGINE_DIR_PREFIX + "dev";
     }
 }

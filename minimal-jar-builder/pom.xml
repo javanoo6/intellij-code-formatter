@@ -36,6 +36,11 @@
             <type>zip</type>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-compiler</artifactId>
+            <version>1.9.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -165,11 +170,10 @@
                         <configuration>
                             <target>
                                 <zip destfile="${project.build.directory}/formatter-engine.zip">
-                                    <!-- IC JARs (** handles the versioned top-level folder
-                                         e.g. idea-IC-243.xxxxx.xxx/lib/) -->
+                                    <!-- Root platform libs and runtime metadata -->
                                     <fileset dir="${idea.dist}"
-                                             includes="**/lib/**,**/plugins/java/**,**/plugins/editorconfig/**"
-                                             excludes="**/lib/src/**,**/lib/antlayout/**"/>
+                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**"
+                                             excludes="lib/src/**,lib/antlayout/**"/>
                                     <!-- Our custom plugin -->
                                     <fileset dir="${plugin.stage}" includes="custom-plugins/**"/>
                                 </zip>
