@@ -16,13 +16,19 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Root of the extracted IC distribution -->
         <idea.dist>${project.build.directory}/idea-dist</idea.dist>
+        <!-- Where we stage the plugin before zipping -->
+        <plugin.stage>${project.build.directory}/plugin-stage</plugin.stage>
+        <!-- Compiled plugin classes -->
+        <plugin.classes>${project.build.directory}/plugin-classes</plugin.classes>
     </properties>
 
     <dependencies>
         <!--
-            The full IC distribution zip. maven-dependency-plugin will download and
-            unpack it to ${idea.dist}/ during the generate-resources phase.
+            The full IC distribution ZIP.
+            maven-dependency-plugin unpacks it to ${idea.dist}/ at generate-resources.
+            Marked provided: we never ship IC JARs from this module's regular artifact.
         -->
         <dependency>
             <groupId>com.jetbrains.intellij.idea</groupId>
@@ -33,12 +39,32 @@
     </dependencies>
 
     <build>
+        <!--
+            IdeaFormatterStarter.java lives here and is compiled by maven-antrun-plugin
+            (not by maven-compiler-plugin) because its classpath comes from the IC JARs
+            that are only present after the generate-resources unpack step.
+            We exclude it from the standard compiler to avoid "package not found" errors.
+        -->
         <plugins>
 
-            <!--
-                Phase 1 (generate-resources): Download and unpack ideaIC.zip → ${idea.dist}/
-                The zip contains the full IC installation (lib/, plugins/, bin/, etc.)
-            -->
+            <!-- Skip default compilation — Main.java (the verifier) has no IntelliJ deps
+                 and compiles fine; IdeaFormatterStarter.java is handled by antrun below. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <excludes>
+                        <!-- Compiled separately by antrun after IC is unpacked -->
+                        <exclude>**/plugin/IdeaFormatterStarter.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- ─────────────────────────────────────────────────────────────────
+                 Phase 1 (generate-resources):
+                 Download ideaIC.zip and unpack → ${idea.dist}/
+                 ───────────────────────────────────────────────────────────────── -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -62,46 +88,104 @@
                 </executions>
             </plugin>
 
-            <!--
-                Phase 2 (package): Repackage the minimal formatter JAR subset into
-                formatter-engine.zip. Includes:
-                  - lib/**  (all core platform JARs)
-                  - plugins/java/**  (Java PSI, formatter, import optimizer)
-                  - plugins/editorconfig/**  (EditorConfig support)
+            <!-- ─────────────────────────────────────────────────────────────────
+                 Phase 2 (compile → process-classes):
 
-                The ideaIC zip root is typically: idea-dist/ideaIC-${intellij.version}/
-                Ant globbing handles both flat and versioned extraction paths.
-            -->
+                 2a. Compile IdeaFormatterStarter.java against the IC JARs using
+                     Ant's <javac> which supports a <fileset> classpath (glob).
+
+                 2b. Package compiled class + plugin.xml → formatter-plugin.jar
+
+                 2c. Stage the plugin in the correct IntelliJ plugin directory
+                     layout under ${plugin.stage}/custom-plugins/ideaformatter/:
+                       lib/formatter-plugin.jar
+                       META-INF/plugin.xml
+                 ───────────────────────────────────────────────────────────────── -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
+
+                    <execution>
+                        <id>compile-and-stage-plugin</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <!-- Compile IdeaFormatterStarter against IC JARs -->
+                                <mkdir dir="${plugin.classes}"/>
+                                <javac srcdir="${project.basedir}/src/main/java/com/github/javanoo6/formatter/plugin"
+                                       destdir="${plugin.classes}"
+                                       source="21" target="21"
+                                       encoding="UTF-8"
+                                       includeantruntime="false"
+                                       fork="true">
+                                    <classpath>
+                                        <fileset dir="${idea.dist}">
+                                            <include name="**/lib/*.jar"/>
+                                            <include name="**/plugins/java/lib/*.jar"/>
+                                        </fileset>
+                                    </classpath>
+                                </javac>
+
+                                <!-- Package into formatter-plugin.jar -->
+                                <jar destfile="${project.build.directory}/formatter-plugin.jar"
+                                     basedir="${plugin.classes}"/>
+
+                                <!-- Stage plugin directory structure for bundling into engine ZIP:
+                                       custom-plugins/ideaformatter/
+                                         META-INF/plugin.xml
+                                         lib/formatter-plugin.jar
+                                -->
+                                <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/META-INF"/>
+                                <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/lib"/>
+                                <copy file="${project.basedir}/src/main/resources/META-INF/plugin.xml"
+                                      todir="${plugin.stage}/custom-plugins/ideaformatter/META-INF/"/>
+                                <copy file="${project.build.directory}/formatter-plugin.jar"
+                                      todir="${plugin.stage}/custom-plugins/ideaformatter/lib/"/>
+
+                                <echo message="Plugin staged at ${plugin.stage}/custom-plugins/ideaformatter/"/>
+                            </target>
+                        </configuration>
+                    </execution>
+
+                    <!-- ─────────────────────────────────────────────────────────
+                         Phase 3 (package):
+                         Build formatter-engine.zip containing:
+                           - IC core lib JARs         (platform, lang, util, …)
+                           - IC plugins/java           (Java PSI + formatter + imports)
+                           - IC plugins/editorconfig   (EditorConfig support)
+                           - custom-plugins/           (our IdeaFormatterStarter plugin)
+                         ───────────────────────────────────────────────────────── -->
                     <execution>
                         <id>build-engine-zip</id>
                         <phase>package</phase>
                         <goals><goal>run</goal></goals>
                         <configuration>
                             <target>
-                                <!-- Find the actual root inside the extracted dir.
-                                     ideaIC zips use a top-level folder like "idea-IU-243.xxxxx.xxx"
-                                     or just extract flat. We handle both via **. -->
-                                <zip destfile="${project.build.directory}/formatter-engine.zip"
-                                     basedir="${idea.dist}"
-                                     includes="**/lib/**,**/plugins/java/**,**/plugins/editorconfig/**"
-                                     excludes="**/lib/src/**,**/lib/antlayout/**"/>
-                                <echo message="formatter-engine.zip built at ${project.build.directory}/formatter-engine.zip"/>
+                                <zip destfile="${project.build.directory}/formatter-engine.zip">
+                                    <!-- IC JARs (** handles the versioned top-level folder
+                                         e.g. idea-IC-243.xxxxx.xxx/lib/) -->
+                                    <fileset dir="${idea.dist}"
+                                             includes="**/lib/**,**/plugins/java/**,**/plugins/editorconfig/**"
+                                             excludes="**/lib/src/**,**/lib/antlayout/**"/>
+                                    <!-- Our custom plugin -->
+                                    <fileset dir="${plugin.stage}" includes="custom-plugins/**"/>
+                                </zip>
+                                <echo message="formatter-engine.zip → ${project.build.directory}/formatter-engine.zip"/>
                             </target>
                         </configuration>
                     </execution>
+
                 </executions>
             </plugin>
 
-            <!--
-                Phase 3 (package): Attach formatter-engine.zip as a Maven artifact
-                so that formatter-cli can declare it as a dependency and have it
-                copied into its resources automatically.
-            -->
+            <!-- ─────────────────────────────────────────────────────────────────
+                 Phase 4 (package):
+                 Attach formatter-engine.zip as a Maven artifact with classifier
+                 "engine" so that formatter-cli can install it locally.
+                 ───────────────────────────────────────────────────────────────── -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>

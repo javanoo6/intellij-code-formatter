@@ -115,7 +115,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         System.out.println("[formatter] Processing: " + filePath.getFileName());
         if (format)          new ReformatCodeProcessor(project, psiFile, null, false).run();
         if (optimizeImports) new OptimizeImportsProcessor(project, psiFile).run();
-        if (rearrange)       new RearrangeCodeProcessor(project, psiFile, null, false).run();
+        if (rearrange)       new RearrangeCodeProcessor(psiFile).run();
     }
 
     /**
@@ -129,7 +129,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
             Files.createDirectories(ideaDir.resolve(".idea"));
 
             return ProjectManagerEx.getInstanceEx()
-                    .openProject(ideaDir, new OpenProjectTask().withProjectName("formatter-project"));
+                    .openProject(ideaDir, OpenProjectTask.build().withProjectName("formatter-project"));
         } catch (Exception e) {
             System.err.println("[formatter] Error opening project: " + e.getMessage());
             return null;

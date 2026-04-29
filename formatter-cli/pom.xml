@@ -16,86 +16,69 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!--
+            Path to the engine ZIP produced by minimal-jar-builder.
+            Build minimal-jar-builder first, then this module:
+              mvn package -pl minimal-jar-builder
+              mvn package -pl formatter-cli
+            The engine ZIP is bundled inside formatter-cli-full.jar as a resource
+            and extracted to $TMPDIR/intellij-formatter-engine/ on first run.
+        -->
+        <engine.zip.path>${project.basedir}/../minimal-jar-builder/target/formatter-engine.zip</engine.zip.path>
     </properties>
 
     <dependencies>
-
-        <!--
-            Engine ZIP produced by minimal-jar-builder (formatter-engine.zip).
-            Copied into src/main/resources/engine/ so it gets bundled inside
-            formatter-cli-full.jar and extracted to a temp dir at first run.
-        -->
-        <dependency>
-            <groupId>org.rqc.cloud-platform</groupId>
-            <artifactId>minimal-jar-builder</artifactId>
-            <version>${project.version}</version>
-            <type>zip</type>
-            <classifier>engine</classifier>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Lightweight CLI argument parsing -->
+        <!-- Only real compile dep: CLI argument parsing. No IntelliJ needed here. -->
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
         </dependency>
-
-        <!--
-            IntelliJ Platform API JARs are NOT compile-time Maven dependencies.
-            IdeaFormatterStarter.java is compiled with IntelliJ JARs on the classpath
-            via the system-scope entries below (populated after a first minimal-jar-builder build).
-
-            During initial bootstrap, comment these out and compile with:
-              mvn compile -Dmaven.compiler.compilerArgs=-proc:none
-            or add proper system-scope deps pointing to the unpacked engine.
-
-            These are loaded at runtime inside the spawned IntelliJ subprocess; the
-            formatter-cli process itself never loads IntelliJ classes directly.
-        -->
-
     </dependencies>
 
     <build>
         <plugins>
 
             <!--
-                Step 1 (generate-resources): Copy the engine ZIP into
-                target/classes/engine/formatter-engine.zip so that maven-shade-plugin
-                includes it inside the fat JAR as a bundled resource.
+                Step 1 (generate-resources):
+                Copy the engine ZIP from the sibling module's target/ into
+                target/classes/engine/ so maven-shade-plugin picks it up as a resource.
+                failonerror="false" means the build still succeeds if minimal-jar-builder
+                hasn't been packaged yet (the fat JAR will just omit the engine).
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.7.1</version>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
                 <executions>
                     <execution>
                         <id>copy-engine-zip-to-resources</id>
                         <phase>generate-resources</phase>
-                        <goals><goal>copy</goal></goals>
+                        <goals><goal>run</goal></goals>
                         <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.rqc.cloud-platform</groupId>
-                                    <artifactId>minimal-jar-builder</artifactId>
-                                    <version>${project.version}</version>
-                                    <type>zip</type>
-                                    <classifier>engine</classifier>
-                                    <outputDirectory>${project.build.outputDirectory}/engine</outputDirectory>
-                                    <destFileName>formatter-engine.zip</destFileName>
-                                </artifactItem>
-                            </artifactItems>
+                            <target>
+                                <mkdir dir="${project.build.outputDirectory}/engine"/>
+                                <delete file="${project.build.outputDirectory}/engine/formatter-engine.zip"
+                                        quiet="true"/>
+                                <available file="${engine.zip.path}" property="engine.zip.present"/>
+                                <fail unless="engine.zip.present"
+                                      message="Missing formatter engine ZIP at ${engine.zip.path}. Run `mvn package -pl minimal-jar-builder` successfully first."/>
+                                <copy file="${engine.zip.path}"
+                                      todir="${project.build.outputDirectory}/engine/"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
             <!--
-                Step 2 (package): Produce formatter-cli-full.jar — a self-contained
-                executable fat JAR containing:
-                  - our compiled classes (Main, FormatterLauncher, IdeaFormatterStarter, ...)
+                Step 2 (package):
+                Produce formatter-cli-full.jar — a self-contained executable fat JAR:
+                  - Main.class, FormatterLauncher.class  (thin launcher, no IntelliJ deps)
                   - picocli classes
-                  - bundled engine/formatter-engine.zip resource
-                  - META-INF/plugin.xml resource (used by IdeaFormatterStarter plugin)
+                  - engine/formatter-engine.zip           (bundled IntelliJ engine)
+
+                IdeaFormatterStarter and plugin.xml live inside the engine ZIP itself
+                (in custom-plugins/ideaformatter/) — built by minimal-jar-builder.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

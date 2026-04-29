@@ -12,10 +12,15 @@ import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+
 /**
- * Locates (or extracts) the IntelliJ engine, sets up the plugin directory,
- * then spawns a subprocess that runs IdeaFormatterStarter via IntelliJ's
- * application startup machinery.
+ * Locates (or extracts) the IntelliJ engine, then spawns a subprocess that runs
+ * IdeaFormatterStarter via IntelliJ's application startup machinery.
+ *
+ * The engine ZIP (produced by minimal-jar-builder) already contains the plugin at:
+ *   custom-plugins/ideaformatter/lib/formatter-plugin.jar
+ *   custom-plugins/ideaformatter/META-INF/plugin.xml
+ * No runtime plugin setup is needed — just point idea.plugins.path at custom-plugins/.
  *
  * Engine resolution order:
  *   1. --engine-dir flag
@@ -25,7 +30,6 @@ import java.util.zip.ZipInputStream;
 public class FormatterLauncher {
 
     private static final String ENGINE_RESOURCE = "/engine/formatter-engine.zip";
-    private static final String PLUGIN_XML_RESOURCE = "/META-INF/plugin.xml";
     private static final String CACHED_ENGINE_DIR = "intellij-formatter-engine";
 
     private final Path engineDirOverride;
@@ -44,9 +48,10 @@ public class FormatterLauncher {
     }
 
     public int launch(List<Path> files) throws Exception {
-        Path engine    = resolveEngine();
-        Path pluginDir = buildPluginDir(engine);
-        List<String> cmd = buildCommand(engine, pluginDir, files);
+        Path engine = resolveEngine();
+        // The plugin lives inside the engine ZIP at custom-plugins/ — no setup needed
+        Path pluginsRoot = engine.resolve("custom-plugins");
+        List<String> cmd = buildCommand(engine, pluginsRoot, files);
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.inheritIO();
@@ -110,47 +115,6 @@ public class FormatterLauncher {
         Files.writeString(cacheDir.resolve(".extracted"), "ok");
         System.out.println("[formatter] Engine ready at " + cacheDir);
         return cacheDir;
-    }
-
-    // -------------------------------------------------------------------------
-    // Plugin directory setup
-    //
-    // IntelliJ discovers plugins from idea.plugins.path. Each plugin must be a
-    // subdirectory containing lib/<plugin>.jar and META-INF/plugin.xml.
-    //
-    //   <pluginsRoot>/
-    //     ideaformatter/
-    //       lib/
-    //         formatter-cli.jar   ← our JAR (contains IdeaFormatterStarter)
-    //       META-INF/
-    //         plugin.xml          ← registers the appStarter extension
-    // -------------------------------------------------------------------------
-
-    private Path buildPluginDir(Path engine) throws Exception {
-        Path pluginsRoot = engine.resolve("custom-plugins");
-        Path pluginDir   = pluginsRoot.resolve("ideaformatter");
-        Path libDir      = pluginDir.resolve("lib");
-        Path metaInfDir  = pluginDir.resolve("META-INF");
-
-        Files.createDirectories(libDir);
-        Files.createDirectories(metaInfDir);
-
-        // Our JAR (the running formatter-cli-full.jar) contains IdeaFormatterStarter
-        try {
-            Path ourJar = Path.of(FormatterLauncher.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI());
-            Files.copy(ourJar, libDir.resolve("formatter-cli.jar"), StandardCopyOption.REPLACE_EXISTING);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Cannot locate formatter-cli JAR", e);
-        }
-
-        // plugin.xml bundled inside our JAR as a classpath resource
-        try (InputStream is = FormatterLauncher.class.getResourceAsStream(PLUGIN_XML_RESOURCE)) {
-            Objects.requireNonNull(is, "plugin.xml resource not found at classpath:" + PLUGIN_XML_RESOURCE);
-            Files.copy(is, metaInfDir.resolve("plugin.xml"), StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        return pluginsRoot;
     }
 
     // -------------------------------------------------------------------------
