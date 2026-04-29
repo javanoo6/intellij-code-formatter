@@ -53,7 +53,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         Path editorConfigDir = null;
         List<Path> files = new ArrayList<>();
 
-        // args[0] is "ideaformatter" (the routing key) — skip it
+        // args[0] is "ideaformatter" (the routing key) - skip it
         Iterator<String> it = args.listIterator(1);
         while (it.hasNext()) {
             String arg = it.next();
@@ -64,7 +64,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
                 case "--editorconfig" -> {
                     if (!it.hasNext()) die("--editorconfig requires a path argument");
                     Path ec = Path.of(it.next()).toAbsolutePath();
-                    editorConfigDir = ec.getParent()!=null ? ec.getParent():Path.of(".");
+                    editorConfigDir = ec.getParent() != null ? ec.getParent() : Path.of(".");
                 }
                 default -> {
                     if (arg.startsWith("-")) die("Unknown option: " + arg);
@@ -77,12 +77,12 @@ public class IdeaFormatterStarter implements ApplicationStarter {
 
         // Set project base so IntelliJ's EditorConfig plugin finds the .editorconfig
         // by walking up from that directory (standard EditorConfig discovery behaviour).
-        Path projectBase = editorConfigDir!=null
+        Path projectBase = editorConfigDir != null
                 ? editorConfigDir
-                :files.get(0).getParent();
+                : files.get(0).getParent();
 
         Project project = openProject(projectBase);
-        if (project==null) die("Failed to open a temporary project at " + projectBase);
+        if (project == null) die("Failed to open a temporary project at " + projectBase);
 
         try {
             final boolean fmt = doFormat;
@@ -106,13 +106,13 @@ public class IdeaFormatterStarter implements ApplicationStarter {
     private void processFile(Project project, Path filePath,
                              boolean format, boolean optimizeImports, boolean rearrange) {
         VirtualFile vf = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(filePath);
-        if (vf==null) {
+        if (vf == null) {
             System.err.println("[formatter] SKIP (VirtualFile not found): " + filePath);
             return;
         }
 
         PsiFile psiFile = PsiManager.getInstance(project).findFile(vf);
-        if (psiFile==null) {
+        if (psiFile == null) {
             System.err.println("[formatter] SKIP (no PSI for file): " + filePath);
             return;
         }

@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>formatter-intellij-plugin</module>
         <module>minimal-jar-builder</module>
         <module>formatter-cli</module>
     </modules>

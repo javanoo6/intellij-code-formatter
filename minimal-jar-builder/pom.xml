@@ -18,6 +18,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Root of the extracted IC distribution -->
         <idea.dist>${project.build.directory}/idea-dist</idea.dist>
+        <!-- Source roots owned by the dedicated plugin module -->
+        <plugin.module.dir>${project.basedir}/../formatter-intellij-plugin</plugin.module.dir>
+        <plugin.src.dir>${plugin.module.dir}/src/main/java/com/github/javanoo6/formatter/plugin</plugin.src.dir>
+        <plugin.descriptor>${plugin.module.dir}/src/main/resources/META-INF/plugin.xml</plugin.descriptor>
         <!-- Where we stage the plugin before zipping -->
         <plugin.stage>${project.build.directory}/plugin-stage</plugin.stage>
         <!-- Compiled plugin classes -->
@@ -44,27 +48,7 @@
     </dependencies>
 
     <build>
-        <!--
-            IdeaFormatterStarter.java lives here and is compiled by maven-antrun-plugin
-            (not by maven-compiler-plugin) because its classpath comes from the IC JARs
-            that are only present after the generate-resources unpack step.
-            We exclude it from the standard compiler to avoid "package not found" errors.
-        -->
         <plugins>
-
-            <!-- Skip default compilation — Main.java (the verifier) has no IntelliJ deps
-                 and compiles fine; IdeaFormatterStarter.java is handled by antrun below. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-                <configuration>
-                    <excludes>
-                        <!-- Compiled separately by antrun after IC is unpacked -->
-                        <exclude>**/plugin/IdeaFormatterStarter.java</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
 
             <!-- ─────────────────────────────────────────────────────────────────
                  Phase 1 (generate-resources):
@@ -98,7 +82,8 @@
             <!-- ─────────────────────────────────────────────────────────────────
                  Phase 2 (compile → process-classes):
 
-                 2a. Compile IdeaFormatterStarter.java against the IC JARs using
+                 2a. Compile IdeaFormatterStarter.java from formatter-intellij-plugin
+                     against the IC JARs using
                      Ant's <javac> which supports a <fileset> classpath (glob).
 
                  2b. Package compiled class + plugin.xml → formatter-plugin.jar
@@ -124,7 +109,7 @@
                             <target>
                                 <!-- Compile IdeaFormatterStarter against IC JARs -->
                                 <mkdir dir="${plugin.classes}"/>
-                                <javac srcdir="${project.basedir}/src/main/java/com/github/javanoo6/formatter/plugin"
+                                <javac srcdir="${plugin.src.dir}"
                                        destdir="${plugin.classes}"
                                        source="21" target="21"
                                        encoding="UTF-8"
@@ -149,7 +134,7 @@
                                 -->
                                 <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/META-INF"/>
                                 <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/lib"/>
-                                <copy file="${project.basedir}/src/main/resources/META-INF/plugin.xml"
+                                <copy file="${plugin.descriptor}"
                                       todir="${plugin.stage}/custom-plugins/ideaformatter/META-INF/"/>
                                 <copy file="${project.build.directory}/formatter-plugin.jar"
                                       todir="${plugin.stage}/custom-plugins/ideaformatter/lib/"/>
