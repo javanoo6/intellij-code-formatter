@@ -3,6 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.rqc.cloud-platform</groupId>
         <artifactId>intellijidea-code-formatter</artifactId>
@@ -16,5 +17,119 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <dependencies>
+
+        <!--
+            Engine ZIP produced by minimal-jar-builder (formatter-engine.zip).
+            Copied into src/main/resources/engine/ so it gets bundled inside
+            formatter-cli-full.jar and extracted to a temp dir at first run.
+        -->
+        <dependency>
+            <groupId>org.rqc.cloud-platform</groupId>
+            <artifactId>minimal-jar-builder</artifactId>
+            <version>${project.version}</version>
+            <type>zip</type>
+            <classifier>engine</classifier>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Lightweight CLI argument parsing -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+        </dependency>
+
+        <!--
+            IntelliJ Platform API JARs are NOT compile-time Maven dependencies.
+            IdeaFormatterStarter.java is compiled with IntelliJ JARs on the classpath
+            via the system-scope entries below (populated after a first minimal-jar-builder build).
+
+            During initial bootstrap, comment these out and compile with:
+              mvn compile -Dmaven.compiler.compilerArgs=-proc:none
+            or add proper system-scope deps pointing to the unpacked engine.
+
+            These are loaded at runtime inside the spawned IntelliJ subprocess; the
+            formatter-cli process itself never loads IntelliJ classes directly.
+        -->
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!--
+                Step 1 (generate-resources): Copy the engine ZIP into
+                target/classes/engine/formatter-engine.zip so that maven-shade-plugin
+                includes it inside the fat JAR as a bundled resource.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-engine-zip-to-resources</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>copy</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.rqc.cloud-platform</groupId>
+                                    <artifactId>minimal-jar-builder</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>zip</type>
+                                    <classifier>engine</classifier>
+                                    <outputDirectory>${project.build.outputDirectory}/engine</outputDirectory>
+                                    <destFileName>formatter-engine.zip</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Step 2 (package): Produce formatter-cli-full.jar — a self-contained
+                executable fat JAR containing:
+                  - our compiled classes (Main, FormatterLauncher, IdeaFormatterStarter, ...)
+                  - picocli classes
+                  - bundled engine/formatter-engine.zip resource
+                  - META-INF/plugin.xml resource (used by IdeaFormatterStarter plugin)
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <outputFile>${project.build.directory}/formatter-cli-full.jar</outputFile>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.github.javanoo6.formatter.Main</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
 
 </project>

@@ -3,6 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.rqc.cloud-platform</groupId>
         <artifactId>intellijidea-code-formatter</artifactId>
@@ -15,6 +16,115 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <idea.dist>${project.build.directory}/idea-dist</idea.dist>
     </properties>
+
+    <dependencies>
+        <!--
+            The full IC distribution zip. maven-dependency-plugin will download and
+            unpack it to ${idea.dist}/ during the generate-resources phase.
+        -->
+        <dependency>
+            <groupId>com.jetbrains.intellij.idea</groupId>
+            <artifactId>ideaIC</artifactId>
+            <type>zip</type>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!--
+                Phase 1 (generate-resources): Download and unpack ideaIC.zip → ${idea.dist}/
+                The zip contains the full IC installation (lib/, plugins/, bin/, etc.)
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>unpack-intellij</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>unpack</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.jetbrains.intellij.idea</groupId>
+                                    <artifactId>ideaIC</artifactId>
+                                    <type>zip</type>
+                                    <outputDirectory>${idea.dist}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Phase 2 (package): Repackage the minimal formatter JAR subset into
+                formatter-engine.zip. Includes:
+                  - lib/**  (all core platform JARs)
+                  - plugins/java/**  (Java PSI, formatter, import optimizer)
+                  - plugins/editorconfig/**  (EditorConfig support)
+
+                The ideaIC zip root is typically: idea-dist/ideaIC-${intellij.version}/
+                Ant globbing handles both flat and versioned extraction paths.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>build-engine-zip</id>
+                        <phase>package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <!-- Find the actual root inside the extracted dir.
+                                     ideaIC zips use a top-level folder like "idea-IU-243.xxxxx.xxx"
+                                     or just extract flat. We handle both via **. -->
+                                <zip destfile="${project.build.directory}/formatter-engine.zip"
+                                     basedir="${idea.dist}"
+                                     includes="**/lib/**,**/plugins/java/**,**/plugins/editorconfig/**"
+                                     excludes="**/lib/src/**,**/lib/antlayout/**"/>
+                                <echo message="formatter-engine.zip built at ${project.build.directory}/formatter-engine.zip"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Phase 3 (package): Attach formatter-engine.zip as a Maven artifact
+                so that formatter-cli can declare it as a dependency and have it
+                copied into its resources automatically.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-engine-zip</id>
+                        <phase>package</phase>
+                        <goals><goal>attach-artifact</goal></goals>
+                        <configuration>
+                            <artifacts>
+                                <artifact>
+                                    <file>${project.build.directory}/formatter-engine.zip</file>
+                                    <type>zip</type>
+                                    <classifier>engine</classifier>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
 
 </project>

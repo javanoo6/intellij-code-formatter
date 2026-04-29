@@ -8,6 +8,7 @@
     <artifactId>intellijidea-code-formatter</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+
     <modules>
         <module>minimal-jar-builder</module>
         <module>formatter-cli</module>
@@ -17,6 +18,39 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Pin to a stable published release. Update when newer releases are available. -->
+        <intellij.version>2024.3.5</intellij.version>
+        <picocli.version>4.7.6</picocli.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>intellij-repository-releases</id>
+            <url>https://www.jetbrains.com/intellij-repository/releases</url>
+        </repository>
+        <repository>
+            <id>intellij-dependencies</id>
+            <url>https://packages.jetbrains.team/maven/p/ij/intellij-dependencies</url>
+        </repository>
+    </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Full IntelliJ Community distribution ZIP, used to extract formatter JARs -->
+            <dependency>
+                <groupId>com.jetbrains.intellij.idea</groupId>
+                <artifactId>ideaIC</artifactId>
+                <version>${intellij.version}</version>
+                <type>zip</type>
+                <scope>provided</scope>
+            </dependency>
+            <!-- Lightweight CLI argument parsing -->
+            <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>${picocli.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
 </project>

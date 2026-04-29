@@ -1,0 +1,23 @@
+<idea-plugin>
+  <id>com.github.javanoo6.formatter</id>
+  <name>IntelliJ Headless Formatter</name>
+  <version>1.0</version>
+  <vendor>javanoo6</vendor>
+
+  <description>
+    Registers the "ideaformatter" application starter used by formatter-cli-full.jar.
+    Handles --format, --optimize-imports, and --rearrange operations headlessly.
+  </description>
+
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!--
+      Registers our starter under the id "ideaformatter".
+      IntelliJ routes:  com.intellij.idea.Main ideaformatter <args>
+      to IdeaFormatterStarter.main(args).
+    -->
+    <appStarter id="ideaformatter"
+                implementation="com.github.javanoo6.formatter.plugin.IdeaFormatterStarter"/>
+  </extensions>
+</idea-plugin>
