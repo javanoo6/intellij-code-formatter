@@ -82,15 +82,43 @@ java -jar formatter-cli/target/formatter-cli-full.jar \
   /absolute/path/to/File.java
 ```
 
+## Daemon Mode
+
+By default, the formatter runs in **daemon mode**. On the first call, a background IntelliJ JVM is started and kept alive. Subsequent calls connect to it directly, skipping the 3–5 second startup cost.
+
+```
+First call  (~5s): engine extracted, daemon started, file formatted
+Second call (<1s): connects to running daemon, file formatted instantly
+```
+
+The daemon port is stored in `$TMPDIR/intellij-formatter-daemon-*.port`.  
+Daemon logs go to `$TMPDIR/intellij-formatter-daemon-*.log`.
+
+### Stop the daemon
+
+```bash
+java -jar formatter-cli/target/formatter-cli-full.jar --stop-daemon
+```
+
+### Bypass the daemon (one-shot mode)
+
+```bash
+java -jar formatter-cli/target/formatter-cli-full.jar \
+  --no-daemon \
+  --format \
+  /absolute/path/to/File.java
+```
+
 ## What Happens On First Run
 
-On first execution, the jar extracts the bundled IntelliJ runtime to a temporary directory under `/tmp`, then runs the formatter headlessly.
+On first execution, the jar extracts the bundled IntelliJ runtime to a temporary directory under `/tmp`, then starts the daemon and formats the file.
 
 Typical log lines:
 
 ```text
+[formatter] First run: extracting IntelliJ engine to /tmp/intellij-formatter-engine-...
 [formatter] Engine ready at /tmp/intellij-formatter-engine-...
-[formatter] Processing: FormatterResult.java
+[formatter] Starting daemon (log: /tmp/intellij-formatter-daemon-....log)
 ```
 
 ## Rebuild After Changes
@@ -127,6 +155,28 @@ Check:
   - `--format`
   - `--optimize-imports`
   - `--rearrange`
+
+### I see no `[formatter] Processing:` output
+
+In daemon mode this is expected — the daemon's stdout goes to its log file, not your terminal. Inspect it:
+
+```bash
+cat $TMPDIR/intellij-formatter-daemon-*.log
+```
+
+### Daemon seems stuck or unresponsive
+
+Stop it and let the next call start a fresh one:
+
+```bash
+java -jar formatter-cli/target/formatter-cli-full.jar --stop-daemon
+```
+
+If `--stop-daemon` reports no daemon running but a stale process exists, kill it manually:
+
+```bash
+kill $(pgrep -f 'ideaformatter --daemon')
+```
 
 ### I only want the final artifact
 

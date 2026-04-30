@@ -37,6 +37,14 @@ public class Main implements Callable<Integer> {
             description = "Path to an already-unpacked IntelliJ engine directory. Defaults to ./engine/ next to the JAR, then to the bundled ZIP extracted to $TMPDIR.")
     private Path engineDir;
 
+    @Option(names = "--no-daemon",
+            description = "Skip daemon; spawn a fresh IntelliJ JVM for this invocation.")
+    private boolean noDaemon;
+
+    @Option(names = "--stop-daemon",
+            description = "Stop the background daemon and exit.")
+    private boolean stopDaemon;
+
     @Parameters(paramLabel = "<file>", description = "Source files or directories to process.")
     private List<Path> files;
 
@@ -46,15 +54,18 @@ public class Main implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
+        if (stopDaemon) {
+            return new FormatterLauncher(engineDir, null, false, false, false, true).stopDaemon();
+        }
         if (!format && !optimizeImports && !rearrange) {
             System.err.println("Error: specify at least one of --format, --optimize-imports, --rearrange");
             return 1;
         }
-        if (files==null || files.isEmpty()) {
+        if (files == null || files.isEmpty()) {
             System.err.println("Error: at least one file path is required.");
             return 1;
         }
-        return new FormatterLauncher(engineDir, editorConfigPath, format, optimizeImports, rearrange)
+        return new FormatterLauncher(engineDir, editorConfigPath, format, optimizeImports, rearrange, noDaemon)
                 .launch(files);
     }
 }

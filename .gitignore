@@ -38,3 +38,5 @@ build/
 ### Mac OS ###
 .DS_Store
 /.idea/
+/out/production/formatter-intellij-plugin/com/github/javanoo6/formatter/plugin/IdeaFormatterStarter.class
+/out/production/formatter-intellij-plugin/META-INF/plugin.xml
