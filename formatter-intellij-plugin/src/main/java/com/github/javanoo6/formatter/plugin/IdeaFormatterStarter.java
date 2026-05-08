@@ -4,17 +4,21 @@ import com.intellij.codeInsight.actions.OptimizeImportsProcessor;
 import com.intellij.codeInsight.actions.RearrangeCodeProcessor;
 import com.intellij.codeInsight.actions.ReformatCodeProcessor;
 import com.intellij.ide.impl.OpenProjectTask;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ApplicationStarter;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ex.ProjectManagerEx;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiManager;
+import com.intellij.lang.java.JavaImportOptimizer;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
@@ -31,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Custom IntelliJ ApplicationStarter registered under id="ideaformatter" in plugin.xml.
@@ -55,15 +60,21 @@ public class IdeaFormatterStarter implements ApplicationStarter {
     public void main(@NotNull List<String> args) {
         // args[0] is "ideaformatter" (routing key)
         if (args.size() >= 3 && "--daemon".equals(args.get(1))) {
-            runDaemon(Path.of(args.get(2)));
+            Thread daemonThread = new Thread(() -> runDaemon(Path.of(args.get(2))), "ideaformatter-daemon");
+            daemonThread.setDaemon(false);
+            daemonThread.start();
             return;
         }
-        try {
-            handleRequest(args.subList(1, args.size()));
-        } catch (Exception e) {
-            die(e.getMessage());
-        }
-        System.exit(0);
+        Thread worker = new Thread(() -> {
+            try {
+                handleRequest(args.subList(1, args.size()));
+                System.exit(0);
+            } catch (Exception e) {
+                die(e.getMessage());
+            }
+        }, "ideaformatter-worker");
+        worker.setDaemon(false);
+        worker.start();
     }
 
     private void runDaemon(Path portFile) {
@@ -139,21 +150,22 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         if (files.isEmpty()) throw new IllegalArgumentException("No source files specified.");
 
         Path projectBase = editorConfigDir != null ? editorConfigDir : files.get(0).getParent();
-        Project project = openProject(projectBase);
+        Project project = invokeAndWait(() -> openProject(projectBase));
         if (project == null) throw new RuntimeException("Failed to open a temporary project at " + projectBase);
 
         try {
+            DumbService.getInstance(project).waitForSmartMode();
             final boolean fmt = doFormat;
             final boolean opt = doOptimizeImports;
             final boolean rea = doRearrange;
-            WriteCommandAction.runWriteCommandAction(project, () -> {
+            invokeAndWait(() -> WriteCommandAction.runWriteCommandAction(project, () -> {
                 for (Path filePath : files) {
                     processFile(project, filePath, fmt, opt, rea);
                 }
-            });
-            FileDocumentManager.getInstance().saveAllDocuments();
+            }));
+            invokeAndWait(() -> FileDocumentManager.getInstance().saveAllDocuments());
         } finally {
-            ProjectManagerEx.getInstanceEx().forceCloseProject(project);
+            invokeAndWait(() -> ProjectManagerEx.getInstanceEx().forceCloseProject(project));
         }
     }
 
@@ -175,7 +187,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         System.out.println("[formatter] Processing: " + filePath.getFileName());
         NonProjectFileWritingAccessProvider.allowWriting(List.of(vf));
         if (format) new ReformatCodeProcessor(project, psiFile, null, false).run();
-        if (optimizeImports) new OptimizeImportsProcessor(project, psiFile).run();
+        if (optimizeImports) optimizeImports(project, psiFile);
         if (rearrange) new RearrangeCodeProcessor(psiFile).run();
 
         // Explicitly save this file's document — saveAllDocuments() is unreliable
@@ -184,6 +196,18 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         if (doc != null) {
             FileDocumentManager.getInstance().saveDocument(doc);
         }
+    }
+
+    private void optimizeImports(Project project, PsiFile psiFile) {
+        if (psiFile instanceof PsiJavaFile) {
+            // JavaImportOptimizer can optimize plain PsiJavaFile instances directly.
+            // OptimizeImportsProcessor skips Java files outside configured source roots,
+            // which is common for our lightweight temporary projects.
+            new JavaImportOptimizer().processFile(psiFile).run();
+            return;
+        }
+
+        new OptimizeImportsProcessor(project, psiFile).run();
     }
 
     /**
@@ -199,5 +223,30 @@ public class IdeaFormatterStarter implements ApplicationStarter {
             System.err.println("[formatter] Error opening project: " + e.getMessage());
             return null;
         }
+    }
+
+    private static void invokeAndWait(Runnable runnable) {
+        ApplicationManager.getApplication().invokeAndWait(runnable);
+    }
+
+    private static <T> T invokeAndWait(ThrowingSupplier<T> supplier) throws Exception {
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        ApplicationManager.getApplication().invokeAndWait(() -> {
+            try {
+                result.set(supplier.get());
+            } catch (Exception e) {
+                error.set(e);
+            }
+        });
+        if (error.get() != null) {
+            throw error.get();
+        }
+        return result.get();
+    }
+
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws Exception;
     }
 }
