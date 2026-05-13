@@ -6,6 +6,8 @@ This repository builds a standalone formatter CLI that uses the IntelliJ Platfor
 - optimize imports
 - rearrange members
 
+It can format Java and other file types supported by the plugins bundled into the engine ZIP, including Markdown.
+
 The final runnable artifact is:
 
 - `formatter-cli/target/formatter-cli-full.jar`

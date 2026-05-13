@@ -150,6 +150,7 @@
                            - IC core lib JARs         (platform, lang, util, …)
                            - IC plugins/java           (Java PSI + formatter + imports)
                            - IC plugins/editorconfig   (EditorConfig support)
+                           - IC plugins/markdown       (Markdown PSI + formatter)
                            - custom-plugins/           (our IdeaFormatterStarter plugin)
                          ───────────────────────────────────────────────────────── -->
                     <execution>
@@ -163,7 +164,7 @@
                                 <zip destfile="${project.build.directory}/formatter-engine.zip">
                                     <!-- Root platform libs and runtime metadata -->
                                     <fileset dir="${idea.dist}"
-                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**"
+                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**"
                                              excludes="lib/src/**,lib/antlayout/**"/>
                                     <!-- Our custom plugin -->
                                     <fileset dir="${plugin.stage}" includes="custom-plugins/**"/>

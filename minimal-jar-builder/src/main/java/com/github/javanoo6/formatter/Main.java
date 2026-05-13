@@ -7,7 +7,7 @@ package com.github.javanoo6.formatter;
  * IntelliJ Platform classes are present before using the engine in formatter-cli.
  * <p>
  * Usage (after unpacking formatter-engine.zip to /tmp/engine):
- * java -cp "/tmp/engine/lib/*:/tmp/engine/plugins/java/lib/*:/tmp/engine/plugins/editorconfig/lib/*" \
+ * java -cp "/tmp/engine/lib/*:/tmp/engine/plugins/java/lib/*:/tmp/engine/plugins/editorconfig/lib/*:/tmp/engine/plugins/markdown/lib/*" \
  * com.github.javanoo6.formatter.Main
  */
 public class Main {
@@ -21,6 +21,7 @@ public class Main {
             "com.intellij.psi.PsiManager",
             "com.intellij.openapi.vfs.LocalFileSystem",
             "com.intellij.openapi.project.Project",
+            "org.intellij.plugins.markdown.lang.MarkdownLanguage",
     };
 
     public static void main(String[] args) throws Exception {
