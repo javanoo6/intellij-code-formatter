@@ -153,20 +153,73 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         Project project = invokeAndWait(() -> openProject(projectBase));
         if (project == null) throw new RuntimeException("Failed to open a temporary project at " + projectBase);
 
+        RemappedWorkspace remappedWorkspace = createRemappedWorkspace(editorConfigDir, files);
+
         try {
             DumbService.getInstance(project).waitForSmartMode();
             final boolean fmt = doFormat;
             final boolean opt = doOptimizeImports;
             final boolean rea = doRearrange;
             invokeAndWait(() -> WriteCommandAction.runWriteCommandAction(project, () -> {
-                for (Path filePath : files) {
+                for (Path filePath : remappedWorkspace.filesToProcess()) {
                     processFile(project, filePath, fmt, opt, rea);
                 }
             }));
             invokeAndWait(() -> FileDocumentManager.getInstance().saveAllDocuments());
         } finally {
+            remappedWorkspace.cleanup();
             invokeAndWait(() -> ProjectManagerEx.getInstanceEx().forceCloseProject(project));
         }
+    }
+
+    private RemappedWorkspace createRemappedWorkspace(Path editorConfigDir, List<Path> files) throws Exception {
+        if (editorConfigDir == null) {
+            return new RemappedWorkspace(files, List.of());
+        }
+
+        Path normalizedRoot = editorConfigDir.toAbsolutePath().normalize();
+        List<Path> remappedFiles = new ArrayList<>(files.size());
+        List<RemappedFile> cleanupFiles = new ArrayList<>();
+
+        for (Path file : files) {
+            Path normalizedFile = file.toAbsolutePath().normalize();
+            if (normalizedFile.startsWith(normalizedRoot)) {
+                remappedFiles.add(normalizedFile);
+                continue;
+            }
+
+            Path remappedPath = createEditorConfigSiblingPath(normalizedRoot, normalizedFile);
+            Files.deleteIfExists(remappedPath);
+
+            boolean copyBackRequired = false;
+            try {
+                Files.createLink(remappedPath, normalizedFile);
+            } catch (Exception linkError) {
+                Files.copy(normalizedFile, remappedPath, StandardCopyOption.REPLACE_EXISTING);
+                copyBackRequired = true;
+            }
+
+            remappedFiles.add(remappedPath);
+            cleanupFiles.add(new RemappedFile(remappedPath, normalizedFile, copyBackRequired));
+        }
+
+        return new RemappedWorkspace(remappedFiles, cleanupFiles);
+    }
+
+    private Path createEditorConfigSiblingPath(Path editorConfigDir, Path targetFile) throws Exception {
+        String fileName = targetFile.getFileName().toString();
+        int dot = fileName.lastIndexOf('.');
+        String baseName = dot >= 0 ? fileName.substring(0, dot) : fileName;
+        String extension = dot >= 0 ? fileName.substring(dot) : "";
+        String prefix = "ideaformatter-link-" + sanitizeFileComponent(baseName) + "-";
+        if (prefix.length() < 3) {
+            prefix = "ifl";
+        }
+        return Files.createTempFile(editorConfigDir, prefix, extension);
+    }
+
+    private String sanitizeFileComponent(String value) {
+        return value.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 
     private void processFile(Project project, Path filePath,
@@ -248,5 +301,24 @@ public class IdeaFormatterStarter implements ApplicationStarter {
     @FunctionalInterface
     private interface ThrowingSupplier<T> {
         T get() throws Exception;
+    }
+
+    private record RemappedWorkspace(List<Path> filesToProcess, List<RemappedFile> cleanupFiles) {
+        private void cleanup() {
+            for (RemappedFile cleanupFile : cleanupFiles) {
+                try {
+                    if (cleanupFile.copyBackRequired()) {
+                        Files.copy(cleanupFile.remappedPath(),
+                                cleanupFile.originalPath(),
+                                StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    Files.deleteIfExists(cleanupFile.remappedPath());
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    private record RemappedFile(Path remappedPath, Path originalPath, boolean copyBackRequired) {
     }
 }
