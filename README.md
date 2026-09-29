@@ -20,6 +20,20 @@ It edits files in place.
 - Maven
 - Internet access for the first build
 
+On macOS with Homebrew:
+
+```bash
+brew install openjdk@21 maven
+export JAVA_HOME="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
+The launcher selects the bundled JNA native library for the JVM architecture
+(`aarch64`/`arm64` or `amd64`) and enables the Java desktop module access needed
+by IntelliJ on macOS. The same JAR is used on each platform.
+macOS Apple Silicon was verified with JDK 21; Intel macOS and Linux were not
+retested for this change.
+
 Check versions:
 
 ```bash

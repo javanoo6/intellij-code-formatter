@@ -274,6 +274,11 @@ public class FormatterLauncher {
     // -------------------------------------------------------------------------
 
     private void addJvmFlags(List<String> cmd, Path engine, Path configDir, Path systemDir, Path pluginsRoot) {
+        if (System.getProperty("os.name").startsWith("Mac")) {
+            cmd.add("--add-opens=java.desktop/com.apple.laf=ALL-UNNAMED");
+            cmd.add("--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED");
+            cmd.add("--add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED");
+        }
         cmd.add("--add-opens=java.base/java.io=ALL-UNNAMED");
         cmd.add("--add-opens=java.base/java.lang=ALL-UNNAMED");
         cmd.add("--add-opens=java.base/java.lang.ref=ALL-UNNAMED");
@@ -330,7 +335,9 @@ public class FormatterLauncher {
         cmd.add("-Didea.system.path=" + systemDir.toAbsolutePath());
         cmd.add("-Didea.plugins.path=" + pluginsRoot.toAbsolutePath());
         cmd.add("-Didea.log.path=" + systemDir.resolve("log").toAbsolutePath());
-        cmd.add("-Djna.boot.library.path=" + engine.resolve("lib/jna/amd64").toAbsolutePath());
+        String arch = System.getProperty("os.arch");
+        String nativeArch = arch.equals("aarch64") || arch.equals("arm64") ? "aarch64" : "amd64";
+        cmd.add("-Djna.boot.library.path=" + engine.resolve("lib/jna/" + nativeArch).toAbsolutePath());
         cmd.add("-Dpty4j.preferred.native.folder=" + engine.resolve("lib/pty4j").toAbsolutePath());
         cmd.add("-Djna.nosys=true");
         cmd.add("-Djna.noclasspath=true");
