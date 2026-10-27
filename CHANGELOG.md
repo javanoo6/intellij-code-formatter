@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.6
+
+- Add Python formatting for `.py`, `.pyw`, and `.pyi` files using the bundled Python Community Edition plugin.
+- Respect Python EditorConfig indentation settings without requiring a Python interpreter.
+- Bundle TOML support required by the Python plugin.
+- Add integration checks for Python formatting, daemon reuse, EditorConfig settings, and existing language support.
+- Python import sorting and unused-import removal remain unsupported in the standalone temporary project.
+- Validate on Linux with JDK 21; macOS was not retested for this release.
+
 ## 0.0.5
 
 - Include the previously unreleased external-file EditorConfig handling already used by the Neovim configuration.
