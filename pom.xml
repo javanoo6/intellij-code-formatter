@@ -9,6 +9,14 @@
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <modules>
     <module>formatter-intellij-plugin</module>
     <module>minimal-jar-builder</module>

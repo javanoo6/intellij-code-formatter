@@ -186,7 +186,10 @@
 
                 <!-- Package into formatter-plugin.jar -->
                 <jar destfile="${project.build.directory}/formatter-plugin.jar"
-                     basedir="${plugin.classes}"/>
+                     basedir="${plugin.classes}">
+                  <zipfileset file="${project.basedir}/../LICENSE"
+                              fullpath="META-INF/LICENSE-intellij-code-formatter.txt"/>
+                </jar>
 
                 <!-- Stage plugin directory structure for bundling into engine ZIP:
                        custom-plugins/ideaformatter/
@@ -230,8 +233,10 @@
                 <zip destfile="${project.build.directory}/formatter-engine.zip">
                   <!-- Root platform libs and runtime metadata -->
                   <fileset dir="${idea.dist}"
-                           includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**,plugins/yaml/**,plugins/sh/**"
+                           includes="lib/**,modules/**,license/**,LICENSE.txt,NOTICE.txt,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**,plugins/yaml/**,plugins/sh/**"
                            excludes="lib/src/**,lib/antlayout/**"/>
+                  <zipfileset file="${project.basedir}/../LICENSE"
+                              fullpath="LICENSE"/>
                   <zipfileset dir="${python.plugin.dist}"
                               includes="python-ce/**"
                               prefix="custom-plugins"/>

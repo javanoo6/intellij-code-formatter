@@ -67,6 +67,8 @@
                       message="Missing formatter engine ZIP at ${engine.zip.path}. Run `mvn package -pl minimal-jar-builder` successfully first."/>
                 <copy file="${engine.zip.path}"
                       todir="${project.build.outputDirectory}/engine/"/>
+                <copy file="${project.basedir}/../LICENSE"
+                      tofile="${project.build.outputDirectory}/META-INF/LICENSE-intellij-code-formatter.txt"/>
               </target>
             </configuration>
           </execution>

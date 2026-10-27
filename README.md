@@ -263,3 +263,13 @@ Use:
 - `formatter-cli/target/formatter-cli-full.jar`
 
 That is the intended end-user jar.
+
+## License
+
+This repository's launcher and formatter integration code are licensed under the
+[MIT License](LICENSE).
+
+Bundled IntelliJ Platform components, language plugins, libraries, and shfmt retain
+their respective licenses and copyright notices. The engine ZIP includes the
+upstream IntelliJ `LICENSE.txt`, `NOTICE.txt`, and `license/` files, and shfmt's
+license is included under `tools/shfmt/LICENSE`.
