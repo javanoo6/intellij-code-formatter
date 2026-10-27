@@ -19,6 +19,7 @@
         <!-- Root of the extracted IC distribution -->
         <idea.dist>${project.build.directory}/idea-dist</idea.dist>
         <python.plugin.dist>${project.build.directory}/python-plugin-dist</python.plugin.dist>
+        <shfmt.dist>${project.build.directory}/shfmt-dist</shfmt.dist>
         <!-- Source roots owned by the dedicated plugin module -->
         <plugin.module.dir>${project.basedir}/../formatter-intellij-plugin</plugin.module.dir>
         <plugin.src.dir>${plugin.module.dir}/src/main/java/com/github/javanoo6/formatter/plugin</plugin.src.dir>
@@ -113,6 +114,41 @@
                 <executions>
 
                     <execution>
+                        <id>download-shfmt</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${shfmt.dist}"/>
+                                <!-- Update these checksums together with shfmt.version in the root POM. -->
+                                <macrodef name="download-shfmt">
+                                    <attribute name="platform"/>
+                                    <attribute name="sha256"/>
+                                    <sequential>
+                                        <get src="https://github.com/mvdan/sh/releases/download/v${shfmt.version}/shfmt_v${shfmt.version}_@{platform}"
+                                             dest="${shfmt.dist}/shfmt_@{platform}" skipexisting="true"/>
+                                        <checksum file="${shfmt.dist}/shfmt_@{platform}" algorithm="SHA-256"
+                                                  property="@{sha256}" verifyproperty="shfmt.@{platform}.valid"/>
+                                        <fail message="shfmt checksum mismatch for @{platform}; delete ${shfmt.dist} and rebuild.">
+                                            <condition>
+                                                <not><istrue value="${shfmt.@{platform}.valid}"/></not>
+                                            </condition>
+                                        </fail>
+                                    </sequential>
+                                </macrodef>
+                                <download-shfmt platform="linux_amd64" sha256="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"/>
+                                <download-shfmt platform="linux_arm64" sha256="5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489"/>
+                                <download-shfmt platform="darwin_amd64" sha256="d33eee0da0f92835b3562e9767a05cee7e4eaeef47daa03bfd09da17b4b590a6"/>
+                                <download-shfmt platform="darwin_arm64" sha256="b7c872db63553ccffc7253aba3ed7d4885a27d83f1ba567b1138c6315a5847e5"/>
+                                <download-shfmt platform="windows_amd64.exe" sha256="13629ce28442ca80b6b5a819f7574ab39e1c28c6e26734ca816c9714e04851df"/>
+                                <copy file="${project.basedir}/../third-party/shfmt/LICENSE" todir="${shfmt.dist}"/>
+                            </target>
+                        </configuration>
+                    </execution>
+
+                    <execution>
                         <id>compile-and-stage-plugin</id>
                         <phase>process-classes</phase>
                         <goals>
@@ -165,6 +201,9 @@
                            - IC plugins/editorconfig   (EditorConfig support)
                            - IC plugins/markdown       (Markdown PSI + formatter)
                            - IC plugins/toml           (required by PythonCore)
+                           - IC plugins/yaml           (YAML formatter)
+                           - IC plugins/sh             (Shell Script file types and PSI)
+                           - tools/shfmt               (native shell formatters and license)
                            - custom-plugins/python-ce  (Python PSI + formatter + imports)
                            - custom-plugins/           (our IdeaFormatterStarter plugin)
                          ───────────────────────────────────────────────────────── -->
@@ -179,10 +218,11 @@
                                 <zip destfile="${project.build.directory}/formatter-engine.zip">
                                     <!-- Root platform libs and runtime metadata -->
                                     <fileset dir="${idea.dist}"
-                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**"
+                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**,plugins/yaml/**,plugins/sh/**"
                                              excludes="lib/src/**,lib/antlayout/**"/>
                                     <zipfileset dir="${python.plugin.dist}" includes="python-ce/**"
                                                 prefix="custom-plugins"/>
+                                    <zipfileset dir="${shfmt.dist}" prefix="tools/shfmt"/>
                                     <!-- Our custom plugin -->
                                     <fileset dir="${plugin.stage}" includes="custom-plugins/**"/>
                                 </zip>

@@ -23,6 +23,7 @@
         <intellij.version>2024.3.5</intellij.version>
         <!-- Compatible with IntelliJ builds 243.24978 through 243.*. -->
         <python.plugin.version>243.24978.46</python.plugin.version>
+        <shfmt.version>3.14.1</shfmt.version>
         <picocli.version>4.7.6</picocli.version>
     </properties>
 

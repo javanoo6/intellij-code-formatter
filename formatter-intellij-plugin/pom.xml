@@ -27,7 +27,7 @@
                 <configuration>
                     <excludes>
                         <!-- Compiled by minimal-jar-builder against unpacked IntelliJ jars. -->
-                        <exclude>**/IdeaFormatterStarter.java</exclude>
+                        <exclude>**/plugin/*.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

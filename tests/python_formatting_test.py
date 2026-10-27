@@ -1,52 +1,11 @@
 """Integration checks for the built formatter-cli-full.jar (JDK 21 required)."""
 
-from pathlib import Path
-import subprocess
-import tempfile
 import unittest
 
+from formatter_test_support import FormatterTestCase
 
-JAR = Path(__file__).resolve().parents[1] / "formatter-cli/target/formatter-cli-full.jar"
 
-
-class PythonFormattingTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not JAR.is_file():
-            raise RuntimeError("Build minimal-jar-builder and formatter-cli first")
-        cls.temp = tempfile.TemporaryDirectory(prefix="formatter-python-test-")
-        cls.root = Path(cls.temp.name)
-        # Isolate engine extraction, daemon port, and IDE caches from normal CLI use.
-        cls.runtime = cls.root / "runtime"
-        cls.runtime.mkdir()
-        cls.command = ["java", f"-Djava.io.tmpdir={cls.runtime}", "-jar", str(JAR)]
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            subprocess.run(cls.command + ["--stop-daemon"], capture_output=True, timeout=30)
-        finally:
-            cls.temp.cleanup()
-
-    def setUp(self):
-        self.project = self.root / self._testMethodName
-        self.project.mkdir()
-
-    def run_formatter(self, *args):
-        result = subprocess.run(
-            self.command + [str(arg) for arg in args],
-            capture_output=True, text=True, timeout=120,
-        )
-        logs = "\n".join(
-            path.read_text(errors="replace") for path in self.runtime.glob("*.log")
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr + logs)
-
-    def write_source(self, name, content):
-        source = self.project / name
-        source.write_text(content)
-        return source
-
+class PythonFormattingTest(FormatterTestCase):
     def test_python_and_pyw_one_shot(self):
         sources = [
             self.write_source(name, "def add(a,b):\n    return a+b\n")
@@ -93,6 +52,7 @@ class PythonFormattingTest(unittest.TestCase):
             "Sample.java": "class Sample{int sum(int a,int b){return a+b;}}\n",
             "sample.json": '{"a":1,"b":[2,3]}\n',
             "sample.md": "|a|b|\n|---|---|\n|1|2|\n",
+            "sample.xml": '<root><child a="1">value</child><child>other</child></root>\n',
         }
         sources = [self.write_source(name, content) for name, content in samples.items()]
         self.run_formatter("--format", *sources)

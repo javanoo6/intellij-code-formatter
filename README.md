@@ -14,7 +14,8 @@ The final runnable artifact is:
 
 It edits files in place.
 
-Supported languages: Java, JSON, Markdown, and Python (`.py`, `.pyw`, `.pyi`).
+Supported languages: Java, XML, JSON, Markdown, Python (`.py`, `.pyw`, `.pyi`),
+YAML (`.yaml`, `.yml`), and Bash/shell scripts (`.sh`, `.bash`, or a shell shebang).
 EditorConfig support is bundled for code style settings.
 
 ## Prerequisites
@@ -70,6 +71,8 @@ This downloads the IntelliJ Community distribution and repackages the runtime ne
 It also downloads Python Community Edition from JetBrains Marketplace. Its version is
 pinned by `python.plugin.version` in the root POM and must remain compatible with
 `intellij.version` ([plugin compatibility](https://plugins.jetbrains.com/plugin/7322-python-community-edition/versions/stable/680217)).
+The engine also bundles YAML and Shell Script plugins and downloads pinned,
+SHA-256-verified `shfmt` binaries from GitHub for shell formatting.
 
 ```bash
 mvn package -pl minimal-jar-builder
@@ -121,6 +124,39 @@ After building both artifacts, run the Python integration checks (requires Pytho
 
 ```bash
 python3 tests/python_formatting_test.py
+```
+
+### YAML and Bash
+
+Use `--format` for YAML and shell scripts:
+
+```bash
+java -jar formatter-cli/target/formatter-cli-full.jar --format config.yaml config.yml script.sh
+```
+
+YAML uses IntelliJ's formatter. Shell scripts use bundled
+[`shfmt` 3.14.1](https://github.com/mvdan/sh/releases/tag/v3.14.1); no separate
+installation or runtime download is needed. Shell binaries are included for Linux
+and macOS on Intel/AMD64 and ARM64, and Windows on AMD64.
+
+Both support `.editorconfig` discovery and the existing `--editorconfig` flag.
+Shell formatting uses tabs by default; configure spaces with:
+
+```ini
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+```
+
+`shfmt` selects the shell dialect from the filename and shebang. Use a Bash
+shebang (`#!/usr/bin/env bash`) for Bash-specific syntax in `.sh` files, or set
+`shell_variant = bash` in `.editorconfig`. Invalid shell syntax returns a nonzero
+exit code and leaves that script unchanged. Scripts are parsed, never executed.
+
+Run all language integration checks after building:
+
+```bash
+python3 -m unittest discover -s tests -p '*_test.py' -v
 ```
 
 ## Daemon Mode

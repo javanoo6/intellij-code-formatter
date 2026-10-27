@@ -18,6 +18,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiManager;
+import com.intellij.sh.psi.ShFile;
 import com.intellij.lang.java.JavaImportOptimizer;
 import org.jetbrains.annotations.NotNull;
 
@@ -239,7 +240,13 @@ public class IdeaFormatterStarter implements ApplicationStarter {
         }
         System.out.println("[formatter] Processing: " + filePath.getFileName());
         NonProjectFileWritingAccessProvider.allowWriting(List.of(vf));
-        if (format) new ReformatCodeProcessor(project, psiFile, null, false).run();
+        if (format) {
+            if (psiFile instanceof ShFile) {
+                ShellFormatter.format(psiFile);
+            } else {
+                new ReformatCodeProcessor(project, psiFile, null, false).run();
+            }
+        }
         if (optimizeImports) optimizeImports(project, psiFile);
         if (rearrange) new RearrangeCodeProcessor(psiFile).run();
 
