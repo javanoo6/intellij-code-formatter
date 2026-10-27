@@ -14,6 +14,9 @@ The final runnable artifact is:
 
 It edits files in place.
 
+Supported languages: Java, JSON, Markdown, and Python (`.py`, `.pyw`, `.pyi`).
+EditorConfig support is bundled for code style settings.
+
 ## Prerequisites
 
 - JDK 21
@@ -64,6 +67,9 @@ cd intellij-code-formatter
 ### 2. Build the engine ZIP
 
 This downloads the IntelliJ Community distribution and repackages the runtime needed by the formatter.
+It also downloads Python Community Edition from JetBrains Marketplace. Its version is
+pinned by `python.plugin.version` in the root POM and must remain compatible with
+`intellij.version` ([plugin compatibility](https://plugins.jetbrains.com/plugin/7322-python-community-edition/versions/stable/680217)).
 
 ```bash
 mvn package -pl minimal-jar-builder
@@ -96,6 +102,25 @@ java -jar formatter-cli/target/formatter-cli-full.jar \
   --rearrange \
   --editorconfig /absolute/path/to/.editorconfig \
   /absolute/path/to/File.java
+```
+
+### Python
+
+Use the same CLI flags for Python files; no Python interpreter is required:
+
+```bash
+java -jar formatter-cli/target/formatter-cli-full.jar --format /absolute/path/to/script.py
+```
+
+Formatting uses JetBrains' Python formatter and respects `.editorconfig`,
+including `[*.py]` indentation settings. Python import sorting and unused-import
+removal are not currently supported in the standalone temporary project;
+`--optimize-imports` may leave Python imports unchanged.
+
+After building both artifacts, run the Python integration checks (requires Python 3):
+
+```bash
+python3 tests/python_formatting_test.py
 ```
 
 ## Daemon Mode

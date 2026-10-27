@@ -18,6 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Root of the extracted IC distribution -->
         <idea.dist>${project.build.directory}/idea-dist</idea.dist>
+        <python.plugin.dist>${project.build.directory}/python-plugin-dist</python.plugin.dist>
         <!-- Source roots owned by the dedicated plugin module -->
         <plugin.module.dir>${project.basedir}/../formatter-intellij-plugin</plugin.module.dir>
         <plugin.src.dir>${plugin.module.dir}/src/main/java/com/github/javanoo6/formatter/plugin</plugin.src.dir>
@@ -29,6 +30,12 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.jetbrains.plugins</groupId>
+            <artifactId>PythonCore</artifactId>
+            <type>zip</type>
+            <scope>provided</scope>
+        </dependency>
         <!--
             The full IC distribution ZIP.
             maven-dependency-plugin unpacks it to ${idea.dist}/ at generate-resources.
@@ -72,6 +79,12 @@
                                     <artifactId>ideaIC</artifactId>
                                     <type>zip</type>
                                     <outputDirectory>${idea.dist}</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>com.jetbrains.plugins</groupId>
+                                    <artifactId>PythonCore</artifactId>
+                                    <type>zip</type>
+                                    <outputDirectory>${python.plugin.dist}</outputDirectory>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
@@ -151,6 +164,8 @@
                            - IC plugins/java           (Java PSI + formatter + imports)
                            - IC plugins/editorconfig   (EditorConfig support)
                            - IC plugins/markdown       (Markdown PSI + formatter)
+                           - IC plugins/toml           (required by PythonCore)
+                           - custom-plugins/python-ce  (Python PSI + formatter + imports)
                            - custom-plugins/           (our IdeaFormatterStarter plugin)
                          ───────────────────────────────────────────────────────── -->
                     <execution>
@@ -164,8 +179,10 @@
                                 <zip destfile="${project.build.directory}/formatter-engine.zip">
                                     <!-- Root platform libs and runtime metadata -->
                                     <fileset dir="${idea.dist}"
-                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**"
+                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**"
                                              excludes="lib/src/**,lib/antlayout/**"/>
+                                    <zipfileset dir="${python.plugin.dist}" includes="python-ce/**"
+                                                prefix="custom-plugins"/>
                                     <!-- Our custom plugin -->
                                     <fileset dir="${plugin.stage}" includes="custom-plugins/**"/>
                                 </zip>

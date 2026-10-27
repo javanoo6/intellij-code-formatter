@@ -21,10 +21,16 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Pin to a stable published release. Update when newer releases are available. -->
         <intellij.version>2024.3.5</intellij.version>
+        <!-- Compatible with IntelliJ builds 243.24978 through 243.*. -->
+        <python.plugin.version>243.24978.46</python.plugin.version>
         <picocli.version>4.7.6</picocli.version>
     </properties>
 
     <repositories>
+        <repository>
+            <id>jetbrains-marketplace</id>
+            <url>https://plugins.jetbrains.com/maven</url>
+        </repository>
         <repository>
             <id>intellij-repository-releases</id>
             <url>https://www.jetbrains.com/intellij-repository/releases</url>
@@ -37,6 +43,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.jetbrains.plugins</groupId>
+                <artifactId>PythonCore</artifactId>
+                <version>${python.plugin.version}</version>
+                <type>zip</type>
+                <scope>provided</scope>
+            </dependency>
             <!-- Full IntelliJ Community distribution ZIP, used to extract formatter JARs -->
             <dependency>
                 <groupId>com.jetbrains.intellij.idea</groupId>
