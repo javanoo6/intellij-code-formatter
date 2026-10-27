@@ -7,7 +7,8 @@
 - Include SHA-256-verified shfmt binaries for Linux and macOS on AMD64/ARM64, and Windows on AMD64, with its BSD license.
 - Support EditorConfig indentation and shell options, including explicitly selected config roots for external files.
 - Report shell parse errors without changing the failed script; wait for formatting to finish before reporting success.
-- Validate one-shot and daemon formatting, invalid shell recovery, heredocs, Bash arrays, and existing languages on Linux with JDK 21. macOS and Windows were not tested for this release.
+- Validate one-shot and daemon formatting, invalid shell recovery, heredocs, Bash arrays, and existing languages on Linux with JDK 21. macOS and Windows were
+  not tested for this release.
 
 ## 0.0.6
 

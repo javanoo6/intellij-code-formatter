@@ -1,269 +1,284 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.rqc.cloud-platform</groupId>
-        <artifactId>intellijidea-code-formatter</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
+  <parent>
+    <groupId>org.rqc.cloud-platform</groupId>
+    <artifactId>intellijidea-code-formatter</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
 
-    <artifactId>minimal-jar-builder</artifactId>
+  <artifactId>minimal-jar-builder</artifactId>
 
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Root of the extracted IC distribution -->
-        <idea.dist>${project.build.directory}/idea-dist</idea.dist>
-        <python.plugin.dist>${project.build.directory}/python-plugin-dist</python.plugin.dist>
-        <shfmt.dist>${project.build.directory}/shfmt-dist</shfmt.dist>
-        <!-- Source roots owned by the dedicated plugin module -->
-        <plugin.module.dir>${project.basedir}/../formatter-intellij-plugin</plugin.module.dir>
-        <plugin.src.dir>${plugin.module.dir}/src/main/java/com/github/javanoo6/formatter/plugin</plugin.src.dir>
-        <plugin.descriptor>${plugin.module.dir}/src/main/resources/META-INF/plugin.xml</plugin.descriptor>
-        <!-- Where we stage the plugin before zipping -->
-        <plugin.stage>${project.build.directory}/plugin-stage</plugin.stage>
-        <!-- Compiled plugin classes -->
-        <plugin.classes>${project.build.directory}/plugin-classes</plugin.classes>
-    </properties>
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Root of the extracted IC distribution -->
+    <idea.dist>${project.build.directory}/idea-dist</idea.dist>
+    <python.plugin.dist>${project.build.directory}/python-plugin-dist</python.plugin.dist>
+    <shfmt.dist>${project.build.directory}/shfmt-dist</shfmt.dist>
+    <!-- Source roots owned by the dedicated plugin module -->
+    <plugin.module.dir>${project.basedir}/../formatter-intellij-plugin</plugin.module.dir>
+    <plugin.src.dir>${plugin.module.dir}/src/main/java/com/github/javanoo6/formatter/plugin</plugin.src.dir>
+    <plugin.descriptor>${plugin.module.dir}/src/main/resources/META-INF/plugin.xml</plugin.descriptor>
+    <!-- Where we stage the plugin before zipping -->
+    <plugin.stage>${project.build.directory}/plugin-stage</plugin.stage>
+    <!-- Compiled plugin classes -->
+    <plugin.classes>${project.build.directory}/plugin-classes</plugin.classes>
+  </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.jetbrains.plugins</groupId>
-            <artifactId>PythonCore</artifactId>
-            <type>zip</type>
-            <scope>provided</scope>
-        </dependency>
-        <!--
-            The full IC distribution ZIP.
-            maven-dependency-plugin unpacks it to ${idea.dist}/ at generate-resources.
-            Marked provided: we never ship IC JARs from this module's regular artifact.
-        -->
-        <dependency>
-            <groupId>com.jetbrains.intellij.idea</groupId>
-            <artifactId>ideaIC</artifactId>
-            <type>zip</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-compiler</artifactId>
-            <version>1.9.0</version>
-        </dependency>
-    </dependencies>
+  <dependencies>
+    <dependency>
+      <groupId>com.jetbrains.plugins</groupId>
+      <artifactId>PythonCore</artifactId>
+      <type>zip</type>
+      <scope>provided</scope>
+    </dependency>
+    <!--
+        The full IC distribution ZIP.
+        maven-dependency-plugin unpacks it to ${idea.dist}/ at generate-resources.
+        Marked provided: we never ship IC JARs from this module's regular artifact.
+    -->
+    <dependency>
+      <groupId>com.jetbrains.intellij.idea</groupId>
+      <artifactId>ideaIC</artifactId>
+      <type>zip</type>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-compiler</artifactId>
+      <version>1.9.0</version>
+    </dependency>
+  </dependencies>
 
-    <build>
-        <plugins>
+  <build>
+    <plugins>
 
-            <!-- ─────────────────────────────────────────────────────────────────
-                 Phase 1 (generate-resources):
-                 Download ideaIC.zip and unpack → ${idea.dist}/
-                 ───────────────────────────────────────────────────────────────── -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.7.1</version>
-                <executions>
-                    <execution>
-                        <id>unpack-intellij</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>com.jetbrains.intellij.idea</groupId>
-                                    <artifactId>ideaIC</artifactId>
-                                    <type>zip</type>
-                                    <outputDirectory>${idea.dist}</outputDirectory>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>com.jetbrains.plugins</groupId>
-                                    <artifactId>PythonCore</artifactId>
-                                    <type>zip</type>
-                                    <outputDirectory>${python.plugin.dist}</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+      <!-- ─────────────────────────────────────────────────────────────────
+           Phase 1 (generate-resources):
+           Download ideaIC.zip and unpack → ${idea.dist}/
+           ───────────────────────────────────────────────────────────────── -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.7.1</version>
+        <executions>
+          <execution>
+            <id>unpack-intellij</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.jetbrains.intellij.idea</groupId>
+                  <artifactId>ideaIC</artifactId>
+                  <type>zip</type>
+                  <outputDirectory>${idea.dist}</outputDirectory>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.jetbrains.plugins</groupId>
+                  <artifactId>PythonCore</artifactId>
+                  <type>zip</type>
+                  <outputDirectory>${python.plugin.dist}</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
-            <!-- ─────────────────────────────────────────────────────────────────
-                 Phase 2 (compile → process-classes):
+      <!-- ─────────────────────────────────────────────────────────────────
+           Phase 2 (compile → process-classes):
 
-                 2a. Compile IdeaFormatterStarter.java from formatter-intellij-plugin
-                     against the IC JARs using
-                     Ant's <javac> which supports a <fileset> classpath (glob).
+           2a. Compile IdeaFormatterStarter.java from formatter-intellij-plugin
+               against the IC JARs using
+               Ant's <javac> which supports a <fileset> classpath (glob).
 
-                 2b. Package compiled class + plugin.xml → formatter-plugin.jar
+           2b. Package compiled class + plugin.xml → formatter-plugin.jar
 
-                 2c. Stage the plugin in the correct IntelliJ plugin directory
-                     layout under ${plugin.stage}/custom-plugins/ideaformatter/:
-                       lib/formatter-plugin.jar
-                       META-INF/plugin.xml
-                 ───────────────────────────────────────────────────────────────── -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
+           2c. Stage the plugin in the correct IntelliJ plugin directory
+               layout under ${plugin.stage}/custom-plugins/ideaformatter/:
+                 lib/formatter-plugin.jar
+                 META-INF/plugin.xml
+           ───────────────────────────────────────────────────────────────── -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
 
-                    <execution>
-                        <id>download-shfmt</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${shfmt.dist}"/>
-                                <!-- Update these checksums together with shfmt.version in the root POM. -->
-                                <macrodef name="download-shfmt">
-                                    <attribute name="platform"/>
-                                    <attribute name="sha256"/>
-                                    <sequential>
-                                        <get src="https://github.com/mvdan/sh/releases/download/v${shfmt.version}/shfmt_v${shfmt.version}_@{platform}"
-                                             dest="${shfmt.dist}/shfmt_@{platform}" skipexisting="true"/>
-                                        <checksum file="${shfmt.dist}/shfmt_@{platform}" algorithm="SHA-256"
-                                                  property="@{sha256}" verifyproperty="shfmt.@{platform}.valid"/>
-                                        <fail message="shfmt checksum mismatch for @{platform}; delete ${shfmt.dist} and rebuild.">
-                                            <condition>
-                                                <not><istrue value="${shfmt.@{platform}.valid}"/></not>
-                                            </condition>
-                                        </fail>
-                                    </sequential>
-                                </macrodef>
-                                <download-shfmt platform="linux_amd64" sha256="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"/>
-                                <download-shfmt platform="linux_arm64" sha256="5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489"/>
-                                <download-shfmt platform="darwin_amd64" sha256="d33eee0da0f92835b3562e9767a05cee7e4eaeef47daa03bfd09da17b4b590a6"/>
-                                <download-shfmt platform="darwin_arm64" sha256="b7c872db63553ccffc7253aba3ed7d4885a27d83f1ba567b1138c6315a5847e5"/>
-                                <download-shfmt platform="windows_amd64.exe" sha256="13629ce28442ca80b6b5a819f7574ab39e1c28c6e26734ca816c9714e04851df"/>
-                                <copy file="${project.basedir}/../third-party/shfmt/LICENSE" todir="${shfmt.dist}"/>
-                            </target>
-                        </configuration>
-                    </execution>
+          <execution>
+            <id>download-shfmt</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${shfmt.dist}"/>
+                <!-- Update these checksums together with shfmt.version in the root POM. -->
+                <macrodef name="download-shfmt">
+                  <attribute name="platform"/>
+                  <attribute name="sha256"/>
+                  <sequential>
+                    <get src="https://github.com/mvdan/sh/releases/download/v${shfmt.version}/shfmt_v${shfmt.version}_@{platform}"
+                         dest="${shfmt.dist}/shfmt_@{platform}"
+                         skipexisting="true"/>
+                    <checksum file="${shfmt.dist}/shfmt_@{platform}"
+                              algorithm="SHA-256"
+                              property="@{sha256}"
+                              verifyproperty="shfmt.@{platform}.valid"/>
+                    <fail message="shfmt checksum mismatch for @{platform}; delete ${shfmt.dist} and rebuild.">
+                      <condition>
+                        <not>
+                          <istrue value="${shfmt.@{platform}.valid}"/>
+                        </not>
+                      </condition>
+                    </fail>
+                  </sequential>
+                </macrodef>
+                <download-shfmt platform="linux_amd64"
+                                sha256="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"/>
+                <download-shfmt platform="linux_arm64"
+                                sha256="5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489"/>
+                <download-shfmt platform="darwin_amd64"
+                                sha256="d33eee0da0f92835b3562e9767a05cee7e4eaeef47daa03bfd09da17b4b590a6"/>
+                <download-shfmt platform="darwin_arm64"
+                                sha256="b7c872db63553ccffc7253aba3ed7d4885a27d83f1ba567b1138c6315a5847e5"/>
+                <download-shfmt platform="windows_amd64.exe"
+                                sha256="13629ce28442ca80b6b5a819f7574ab39e1c28c6e26734ca816c9714e04851df"/>
+                <copy file="${project.basedir}/../third-party/shfmt/LICENSE"
+                      todir="${shfmt.dist}"/>
+              </target>
+            </configuration>
+          </execution>
 
-                    <execution>
-                        <id>compile-and-stage-plugin</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <!-- Compile IdeaFormatterStarter against IC JARs -->
-                                <mkdir dir="${plugin.classes}"/>
-                                <javac srcdir="${plugin.src.dir}"
-                                       destdir="${plugin.classes}"
-                                       source="21" target="21"
-                                       encoding="UTF-8"
-                                       includeantruntime="false"
-                                       fork="true">
-                                    <classpath>
-                                        <fileset dir="${idea.dist}">
-                                            <include name="**/lib/*.jar"/>
-                                            <include name="**/plugins/java/lib/*.jar"/>
-                                        </fileset>
-                                    </classpath>
-                                </javac>
+          <execution>
+            <id>compile-and-stage-plugin</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Compile IdeaFormatterStarter against IC JARs -->
+                <mkdir dir="${plugin.classes}"/>
+                <javac srcdir="${plugin.src.dir}"
+                       destdir="${plugin.classes}"
+                       source="21"
+                       target="21"
+                       encoding="UTF-8"
+                       includeantruntime="false"
+                       fork="true">
+                  <classpath>
+                    <fileset dir="${idea.dist}">
+                      <include name="**/lib/*.jar"/>
+                      <include name="**/plugins/java/lib/*.jar"/>
+                    </fileset>
+                  </classpath>
+                </javac>
 
-                                <!-- Package into formatter-plugin.jar -->
-                                <jar destfile="${project.build.directory}/formatter-plugin.jar"
-                                     basedir="${plugin.classes}"/>
+                <!-- Package into formatter-plugin.jar -->
+                <jar destfile="${project.build.directory}/formatter-plugin.jar"
+                     basedir="${plugin.classes}"/>
 
-                                <!-- Stage plugin directory structure for bundling into engine ZIP:
-                                       custom-plugins/ideaformatter/
-                                         META-INF/plugin.xml
-                                         lib/formatter-plugin.jar
-                                -->
-                                <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/META-INF"/>
-                                <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/lib"/>
-                                <copy file="${plugin.descriptor}"
-                                      todir="${plugin.stage}/custom-plugins/ideaformatter/META-INF/"/>
-                                <copy file="${project.build.directory}/formatter-plugin.jar"
-                                      todir="${plugin.stage}/custom-plugins/ideaformatter/lib/"/>
+                <!-- Stage plugin directory structure for bundling into engine ZIP:
+                       custom-plugins/ideaformatter/
+                         META-INF/plugin.xml
+                         lib/formatter-plugin.jar
+                -->
+                <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/META-INF"/>
+                <mkdir dir="${plugin.stage}/custom-plugins/ideaformatter/lib"/>
+                <copy file="${plugin.descriptor}"
+                      todir="${plugin.stage}/custom-plugins/ideaformatter/META-INF/"/>
+                <copy file="${project.build.directory}/formatter-plugin.jar"
+                      todir="${plugin.stage}/custom-plugins/ideaformatter/lib/"/>
 
-                                <echo message="Plugin staged at ${plugin.stage}/custom-plugins/ideaformatter/"/>
-                            </target>
-                        </configuration>
-                    </execution>
+                <echo message="Plugin staged at ${plugin.stage}/custom-plugins/ideaformatter/"/>
+              </target>
+            </configuration>
+          </execution>
 
-                    <!-- ─────────────────────────────────────────────────────────
-                         Phase 3 (package):
-                         Build formatter-engine.zip containing:
-                           - IC core lib JARs         (platform, lang, util, …)
-                           - IC plugins/java           (Java PSI + formatter + imports)
-                           - IC plugins/editorconfig   (EditorConfig support)
-                           - IC plugins/markdown       (Markdown PSI + formatter)
-                           - IC plugins/toml           (required by PythonCore)
-                           - IC plugins/yaml           (YAML formatter)
-                           - IC plugins/sh             (Shell Script file types and PSI)
-                           - tools/shfmt               (native shell formatters and license)
-                           - custom-plugins/python-ce  (Python PSI + formatter + imports)
-                           - custom-plugins/           (our IdeaFormatterStarter plugin)
-                         ───────────────────────────────────────────────────────── -->
-                    <execution>
-                        <id>build-engine-zip</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <zip destfile="${project.build.directory}/formatter-engine.zip">
-                                    <!-- Root platform libs and runtime metadata -->
-                                    <fileset dir="${idea.dist}"
-                                             includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**,plugins/yaml/**,plugins/sh/**"
-                                             excludes="lib/src/**,lib/antlayout/**"/>
-                                    <zipfileset dir="${python.plugin.dist}" includes="python-ce/**"
-                                                prefix="custom-plugins"/>
-                                    <zipfileset dir="${shfmt.dist}" prefix="tools/shfmt"/>
-                                    <!-- Our custom plugin -->
-                                    <fileset dir="${plugin.stage}" includes="custom-plugins/**"/>
-                                </zip>
-                                <echo message="formatter-engine.zip → ${project.build.directory}/formatter-engine.zip"/>
-                            </target>
-                        </configuration>
-                    </execution>
+          <!-- ─────────────────────────────────────────────────────────
+               Phase 3 (package):
+               Build formatter-engine.zip containing:
+                 - IC core lib JARs         (platform, lang, util, …)
+                 - IC plugins/java           (Java PSI + formatter + imports)
+                 - IC plugins/editorconfig   (EditorConfig support)
+                 - IC plugins/markdown       (Markdown PSI + formatter)
+                 - IC plugins/toml           (required by PythonCore)
+                 - IC plugins/yaml           (YAML formatter)
+                 - IC plugins/sh             (Shell Script file types and PSI)
+                 - tools/shfmt               (native shell formatters and license)
+                 - custom-plugins/python-ce  (Python PSI + formatter + imports)
+                 - custom-plugins/           (our IdeaFormatterStarter plugin)
+               ───────────────────────────────────────────────────────── -->
+          <execution>
+            <id>build-engine-zip</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <zip destfile="${project.build.directory}/formatter-engine.zip">
+                  <!-- Root platform libs and runtime metadata -->
+                  <fileset dir="${idea.dist}"
+                           includes="lib/**,modules/**,product-info.json,plugins/java/**,plugins/java-ide-customization/**,plugins/json/**,plugins/editorconfig/**,plugins/markdown/**,plugins/toml/**,plugins/yaml/**,plugins/sh/**"
+                           excludes="lib/src/**,lib/antlayout/**"/>
+                  <zipfileset dir="${python.plugin.dist}"
+                              includes="python-ce/**"
+                              prefix="custom-plugins"/>
+                  <zipfileset dir="${shfmt.dist}"
+                              prefix="tools/shfmt"/>
+                  <!-- Our custom plugin -->
+                  <fileset dir="${plugin.stage}"
+                           includes="custom-plugins/**"/>
+                </zip>
+                <echo message="formatter-engine.zip → ${project.build.directory}/formatter-engine.zip"/>
+              </target>
+            </configuration>
+          </execution>
 
-                </executions>
-            </plugin>
+        </executions>
+      </plugin>
 
-            <!-- ─────────────────────────────────────────────────────────────────
-                 Phase 4 (package):
-                 Attach formatter-engine.zip as a Maven artifact with classifier
-                 "engine" so that formatter-cli can install it locally.
-                 ───────────────────────────────────────────────────────────────── -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
-                <executions>
-                    <execution>
-                        <id>attach-engine-zip</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>attach-artifact</goal>
-                        </goals>
-                        <configuration>
-                            <artifacts>
-                                <artifact>
-                                    <file>${project.build.directory}/formatter-engine.zip</file>
-                                    <type>zip</type>
-                                    <classifier>engine</classifier>
-                                </artifact>
-                            </artifacts>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+      <!-- ─────────────────────────────────────────────────────────────────
+           Phase 4 (package):
+           Attach formatter-engine.zip as a Maven artifact with classifier
+           "engine" so that formatter-cli can install it locally.
+           ───────────────────────────────────────────────────────────────── -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>attach-engine-zip</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.build.directory}/formatter-engine.zip</file>
+                  <type>zip</type>
+                  <classifier>engine</classifier>
+                </artifact>
+              </artifacts>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
-        </plugins>
-    </build>
+    </plugins>
+  </build>
 
 </project>

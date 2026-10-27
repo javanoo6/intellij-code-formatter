@@ -1,7 +1,9 @@
 ## Core API Dependencies
 
 ### 1. ApplicationStarter Interface
-**Location:** [ApplicationStarter.kt](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt)
+
+**Location:
+** [ApplicationStarter.kt](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt)
 
 This is the main interface that enables custom command-line applications in IntelliJ.
 
@@ -26,12 +28,18 @@ interface ApplicationStarter {
 ```
 
 **Key methods:**
-- [Line 69](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt#L69): `fun main(args: List<String>) {}` - Called with command-line arguments
-- [Line 74](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt#L74): `val isHeadless: Boolean get() = true` - Enables headless operation
-- [Line 60](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt#L60): `fun premain(args: List<String>) {}` - Called before application initialization
+
+- [Line 69](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt#L69):
+  `fun main(args: List<String>) {}` - Called with command-line arguments
+- [Line 74](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt#L74):
+  `val isHeadless: Boolean get() = true` - Enables headless operation
+- [Line 60](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarter.kt#L60):
+  `fun premain(args: List<String>) {}` - Called before application initialization
 
 ### 2. ApplicationStarterEP Extension Point
-**Location:** [ApplicationStarterEP.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarterEP.java)
+
+**Location:
+** [ApplicationStarterEP.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core/src/com/intellij/openapi/application/ApplicationStarterEP.java)
 
 ```java
 // Line 13: Extension point implementation
@@ -50,7 +58,9 @@ This shows how custom starters are registered via plugin.xml with an `implementa
 ### 3. Code Formatting Processors
 
 #### ReformatCodeProcessor
-**Location:** [ReformatCodeProcessor.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/ReformatCodeProcessor.java)
+
+**Location:
+** [ReformatCodeProcessor.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/ReformatCodeProcessor.java)
 
 ```java
 // Lines 85-90: Constructor used by IdeaFormatterStarter
@@ -62,10 +72,14 @@ public ReformatCodeProcessor(Project project, PsiFile file, @Nullable TextRange 
 }
 ```
 
-The processor uses `CodeStyleManager.getInstance(myProject).reformatText()` ([line 239](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/ReformatCodeProcessor.java#L239)) internally.
+The processor uses
+`CodeStyleManager.getInstance(myProject).reformatText()` ([line 239](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/ReformatCodeProcessor.java#L239))
+internally.
 
-#### OptimizeImportsProcessor  
-**Location:** [OptimizeImportsProcessor.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/OptimizeImportsProcessor.java)
+#### OptimizeImportsProcessor
+
+**Location:
+** [OptimizeImportsProcessor.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/OptimizeImportsProcessor.java)
 
 ```java
 // Lines 61-63: Constructor used by IdeaFormatterStarter
@@ -75,7 +89,9 @@ public OptimizeImportsProcessor(@NotNull Project project, @NotNull PsiFile file)
 ```
 
 #### RearrangeCodeProcessor
-**Location:** [RearrangeCodeProcessor.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/RearrangeCodeProcessor.java)
+
+**Location:
+** [RearrangeCodeProcessor.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/lang-impl/src/com/intellij/codeInsight/actions/RearrangeCodeProcessor.java)
 
 ```java
 // Lines 45-47: Constructor used by IdeaFormatterStarter  
@@ -85,7 +101,9 @@ public RearrangeCodeProcessor(@NotNull PsiFile psiFile) {
 ```
 
 ### 4. Write Command Actions
-**Location:** [WriteCommandAction.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/core-api/src/com/intellij/openapi/command/WriteCommandAction.java)
+
+**Location:
+** [WriteCommandAction.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/core-api/src/com/intellij/openapi/command/WriteCommandAction.java)
 
 ```java
 // Lines 352-354: Method used for thread-safe write operations
@@ -97,7 +115,9 @@ public static <T> T runWriteCommandAction(Project project, final @NotNull Comput
 This ensures all file modifications happen in proper write contexts.
 
 ### 5. Non-Project File Writing Access
-**Location:** [NonProjectFileWritingAccessProvider.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core-impl/src/com/intellij/openapi/fileEditor/impl/NonProjectFileWritingAccessProvider.java)
+
+**Location:
+** [NonProjectFileWritingAccessProvider.java](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core-impl/src/com/intellij/openapi/fileEditor/impl/NonProjectFileWritingAccessProvider.java)
 
 ```java
 // Lines 173-177: Critical method for allowing writes to non-project files
@@ -111,7 +131,9 @@ public static void allowWriting(Iterable<? extends VirtualFile> allowedFiles) {
 This was discovered during debugging when the formatter couldn't write to files outside the temporary project.
 
 ### 6. Project Management
-**Location:** [ProjectManagerEx.kt](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core-impl/src/com/intellij/openapi/project/ex/ProjectManagerEx.kt)
+
+**Location:
+** [ProjectManagerEx.kt](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core-impl/src/com/intellij/openapi/project/ex/ProjectManagerEx.kt)
 
 ```kotlin
 // Line 75: Method used to open temporary projects
@@ -125,7 +147,9 @@ fun forceCloseProject(project: Project): Boolean {
 ```
 
 ### 7. OpenProjectTask Builder
-**Location:** [OpenProjectTask.kt](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core-impl/src/com/intellij/ide/impl/OpenProjectTask.kt)
+
+**Location:
+** [OpenProjectTask.kt](https://github.com/JetBrains/intellij-community/blob/bfcc8d73f9255f476efa048f487aebfbfd615dad/platform/ide-core-impl/src/com/intellij/ide/impl/OpenProjectTask.kt)
 
 ```kotlin
 // Lines 102-105: Builder pattern for project opening options

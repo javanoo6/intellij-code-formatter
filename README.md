@@ -161,7 +161,8 @@ python3 -m unittest discover -s tests -p '*_test.py' -v
 
 ## Daemon Mode
 
-By default, the formatter runs in **daemon mode**. On the first call, a background IntelliJ JVM is started and kept alive. Subsequent calls connect to it directly, skipping the 3–5 second startup cost.
+By default, the formatter runs in **daemon mode**. On the first call, a background IntelliJ JVM is started and kept alive. Subsequent calls connect to it
+directly, skipping the 3–5 second startup cost.
 
 ```
 First call  (~5s): engine extracted, daemon started, file formatted
@@ -229,9 +230,9 @@ Check:
 - you are running `formatter-cli-full.jar`, not `formatter-cli-1.0-SNAPSHOT.jar`
 - the file path is absolute and correct
 - you passed at least one of:
-  - `--format`
-  - `--optimize-imports`
-  - `--rearrange`
+    - `--format`
+    - `--optimize-imports`
+    - `--rearrange`
 
 ### I see no `[formatter] Processing:` output
 

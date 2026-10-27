@@ -10,8 +10,8 @@ from formatter_test_support import FormatterTestCase
 class ShellYamlFormattingTest(FormatterTestCase):
     def test_yaml_and_yml_one_shot(self):
         sources = [
-            self.write_source(name, "root:\n   child:  [1,2,3]\n")
-            for name in ("sample.yaml", "sample.yml")
+                self.write_source(name, "root:\n   child:  [1,2,3]\n")
+                for name in ("sample.yaml", "sample.yml")
         ]
         self.run_formatter("--no-daemon", "--format", *sources)
         for source in sources:
@@ -20,11 +20,11 @@ class ShellYamlFormattingTest(FormatterTestCase):
 
     def test_yaml_editorconfig_and_block_scalar(self):
         config = self.write_source(
-            ".editorconfig", "root = true\n\n[*.{yaml,yml}]\nindent_style = space\nindent_size = 4\n"
+                ".editorconfig", "root = true\n\n[*.{yaml,yml}]\nindent_style = space\nindent_size = 4\n"
         )
         sources = [
-            self.write_source(name, "root:\n  text: |\n    hello world\n    second line\n  count:  1\n")
-            for name in ("sample.yaml", "sample.yml")
+                self.write_source(name, "root:\n  text: |\n    hello world\n    second line\n  count:  1\n")
+                for name in ("sample.yaml", "sample.yml")
         ]
         self.run_formatter("--format", "--editorconfig", config, *sources)
         for source in sources:
@@ -35,8 +35,8 @@ class ShellYamlFormattingTest(FormatterTestCase):
 
     def test_bash_sh_and_shebang_one_shot(self):
         sources = [
-            self.write_source(name, "#!/usr/bin/env bash\nif true;then\necho hello\nfi\n")
-            for name in ("sample.bash", "sample.sh", "script")
+                self.write_source(name, "#!/usr/bin/env bash\nif true;then\necho hello\nfi\n")
+                for name in ("sample.bash", "sample.sh", "script")
         ]
         for source in sources:
             source.chmod(0o755)
@@ -44,7 +44,7 @@ class ShellYamlFormattingTest(FormatterTestCase):
         for source in sources:
             with self.subTest(source=source.name):
                 self.assertEqual(
-                    "#!/usr/bin/env bash\nif true; then\n\techo hello\nfi\n", source.read_text()
+                        "#!/usr/bin/env bash\nif true; then\n\techo hello\nfi\n", source.read_text()
                 )
                 self.assertTrue(source.stat().st_mode & 0o100)
                 if shutil.which("bash"):
@@ -52,7 +52,7 @@ class ShellYamlFormattingTest(FormatterTestCase):
 
     def test_bash_editorconfig(self):
         config = self.write_source(
-            ".editorconfig", "root = true\n\n[*.sh]\nindent_style = space\nindent_size = 2\n"
+                ".editorconfig", "root = true\n\n[*.sh]\nindent_style = space\nindent_size = 2\n"
         )
         source = self.write_source("sample.sh", "#!/bin/bash\nif true;then\necho hello\nfi\n")
         self.run_formatter("--format", "--editorconfig", config, source)
@@ -60,7 +60,7 @@ class ShellYamlFormattingTest(FormatterTestCase):
 
     def test_external_files_respect_explicit_editorconfig(self):
         config = self.write_source(
-            ".editorconfig", "root = true\n\n[*.{sh,yml}]\nindent_style = space\nindent_size = 4\n"
+                ".editorconfig", "root = true\n\n[*.{sh,yml}]\nindent_style = space\nindent_size = 4\n"
         )
         outside = self.project / "outside"
         outside.mkdir()
@@ -102,7 +102,7 @@ class ShellYamlFormattingTest(FormatterTestCase):
 
     def test_heredoc_and_bash_arrays(self):
         source = self.write_source(
-            "sample.bash", '#!/bin/bash\nvalues=(one two)\nif [[ ${values[0]} == one ]];then\ncat <<\'EOF\'\n  literal $value\nEOF\nfi\n'
+                "sample.bash", '#!/bin/bash\nvalues=(one two)\nif [[ ${values[0]} == one ]];then\ncat <<\'EOF\'\n  literal $value\nEOF\nfi\n'
         )
         self.run_formatter("--format", source)
         self.assertIn("\n  literal $value\nEOF\n", source.read_text())

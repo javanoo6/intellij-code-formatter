@@ -145,17 +145,20 @@ This document shows how the IdeaFormatterStarter components interact during buil
 ## Key Relationships
 
 ### Build-time flow:
+
 - Maven builds both the thin CLI and the IntelliJ plugin
 - minimal-jar-builder packages the plugin with IntelliJ Platform APIs
 - plugin.xml registers the custom ApplicationStarter extension point
 
 ### Runtime flow:
+
 - Thin CLI spawns IntelliJ subprocess with our JAR
 - IntelliJ's extension system loads our IdeaFormatterStarter
 - The starter uses platform APIs for formatting, file access, and thread safety
 - All work happens inside the IntelliJ subprocess, never in the thin CLI
 
 ### Critical dependencies:
+
 - `WriteCommandAction` ensures thread-safe file modifications
 - `NonProjectFileWritingAccessProvider` allows writing outside the project
 - Built-in processors (`ReformatCodeProcessor`, etc.) do the actual formatting work

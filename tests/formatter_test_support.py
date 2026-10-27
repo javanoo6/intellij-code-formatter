@@ -5,7 +5,6 @@ import subprocess
 import tempfile
 import unittest
 
-
 JAR = Path(__file__).resolve().parents[1] / "formatter-cli/target/formatter-cli-full.jar"
 
 
@@ -34,11 +33,11 @@ class FormatterTestCase(unittest.TestCase):
 
     def run_formatter(self, *args, expected_code=0):
         result = subprocess.run(
-            self.command + [str(arg) for arg in args],
-            capture_output=True, text=True, timeout=120,
+                self.command + [str(arg) for arg in args],
+                capture_output=True, text=True, timeout=120,
         )
         logs = "\n".join(
-            path.read_text(errors="replace") for path in self.runtime.glob("*.log")
+                path.read_text(errors="replace") for path in self.runtime.glob("*.log")
         )
         self.assertEqual(result.returncode, expected_code, result.stdout + result.stderr + logs)
         return result
