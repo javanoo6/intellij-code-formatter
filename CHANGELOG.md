@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.8
+
+- Fix intermittent `IndexNotReadyException` failures during cold Java import cleanup.
+- Recheck smart mode under the EDT write lock and retry when VFS/PSI initialization starts more indexing.
+- Run headless formatting processors synchronously without modal progress tasks.
+- Add cold one-shot and repeated-daemon Java cleanup regression checks.
+
 ## 0.0.7
 
 - Add YAML formatting for both `.yaml` and `.yml` files using the bundled IntelliJ YAML plugin.

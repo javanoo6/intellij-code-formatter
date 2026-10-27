@@ -12,6 +12,7 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
 import com.intellij.openapi.project.DumbService;
+import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ex.ProjectManagerEx;
 import com.intellij.openapi.vfs.LocalFileSystem;
@@ -177,15 +178,28 @@ public class IdeaFormatterStarter implements ApplicationStarter {
     RemappedWorkspace remappedWorkspace = createRemappedWorkspace(editorConfigDir, files);
 
     try {
-      DumbService.getInstance(project).waitForSmartMode();
       final boolean fmt = doFormat;
       final boolean opt = doOptimizeImports;
       final boolean rea = doRearrange;
-      invokeAndWait(() -> WriteCommandAction.runWriteCommandAction(project, () -> {
-        for (Path filePath : remappedWorkspace.filesToProcess()) {
-          processFile(project, filePath, fmt, opt, rea);
+      DumbService dumbService = DumbService.getInstance(project);
+      while (true) {
+        // Indexing can start between a worker's wait and its EDT invocation.
+        // Check again under the write lock, and wait outside the EDT if needed.
+        dumbService.waitForSmartMode();
+        try {
+          boolean completed = invokeAndWait(() -> WriteCommandAction.writeCommandAction(project).compute(() -> {
+            if (dumbService.isDumb()) return false;
+            for (Path filePath : remappedWorkspace.filesToProcess()) {
+              processFile(project, filePath, fmt, opt, rea);
+            }
+            return true;
+          }));
+          if (completed) break;
+        } catch (IndexNotReadyException ignored) {
+          // VFS/PSI initialization can queue more indexing. Release the write
+          // lock before waiting, then retry the idempotent file operations.
         }
-      }));
+      }
       invokeAndWait(() -> FileDocumentManager.getInstance().saveAllDocuments());
     } finally {
       remappedWorkspace.cleanup();
@@ -264,11 +278,11 @@ public class IdeaFormatterStarter implements ApplicationStarter {
       if (psiFile instanceof ShFile) {
         ShellFormatter.format(psiFile);
       } else {
-        new ReformatCodeProcessor(project, psiFile, null, false).run();
+        new ReformatCodeProcessor(project, psiFile, null, false).runWithoutProgress();
       }
     }
     if (optimizeImports) optimizeImports(project, psiFile);
-    if (rearrange) new RearrangeCodeProcessor(psiFile).run();
+    if (rearrange) new RearrangeCodeProcessor(psiFile).runWithoutProgress();
 
     // Explicitly save this file's document — saveAllDocuments() is unreliable
     // across project open/close cycles in a long-lived daemon JVM
@@ -287,7 +301,7 @@ public class IdeaFormatterStarter implements ApplicationStarter {
       return;
     }
 
-    new OptimizeImportsProcessor(project, psiFile).run();
+    new OptimizeImportsProcessor(project, psiFile).runWithoutProgress();
   }
 
   /**
